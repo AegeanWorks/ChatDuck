@@ -1,0 +1,44 @@
+[
+  {
+    "schema": 1,
+    "surface": "app",
+    "baseline_commit": "c1f0177ed08f128865a88e60a7f494d6f144f343",
+    "contract_hash": "01808a35cdcd13dbb2517f746d030c563f4fd190b2cd45e1564df7bf2727b5ea",
+    "started_at": 1793488574.7904358,
+    "finished_at": 1793488581.378513,
+    "strikes": 0,
+    "reviewer": "Command Code (AI; headless Edge smoke against a mock OpenAI stream: connected, sent, streamed the answer, no resource errors)",
+    "allowed_removals": [],
+    "final_snapshot_digest": "",
+    "final_snapshot_entries": 0,
+    "surface_digest": "66b84b23275a8676d090b5b08067cc2a48ce63003d0376fdfa63033f20d0c3cb"
+  },
+  {
+    "schema": 1,
+    "surface": "app",
+    "baseline_commit": "ab9681fb6be71f0c8ce086ac35eed9e2c46c4819",
+    "contract_hash": "01808a35cdcd13dbb2517f746d030c563f4fd190b2cd45e1564df7bf2727b5ea",
+    "started_at": 1793488865.5954547,
+    "finished_at": 1793488872.1134698,
+    "strikes": 0,
+    "reviewer": "Command Code (AI; re-reviewed the changed stream and chat ordering code; client tests and headless stream smoke)",
+    "allowed_removals": [],
+    "final_snapshot_digest": "",
+    "final_snapshot_entries": 0,
+    "surface_digest": "b558686e759174ea6b8059ac23c41137396bb3006bc81e63a4771c7c23ecff68"
+  },
+  {
+    "schema": 1,
+    "surface": "app",
+    "baseline_commit": "b67d29c0b8bb568b504753e43cc1e8da6d621809",
+    "contract_hash": "01808a35cdcd13dbb2517f746d030c563f4fd190b2cd45e1564df7bf2727b5ea",
+    "started_at": 1793488921.072322,
+    "finished_at": 1793488928.0877626,
+    "strikes": 0,
+    "reviewer": "Command Code (AI; comment-only change marking the storage key as a non-secret; no visual change; tests pass)",
+    "allowed_removals": [],
+    "final_snapshot_digest": "",
+    "final_snapshot_entries": 0,
+    "surface_digest": "dd2767b51af721a6c5dd7fd222a11cc254c6b766e7e4ea4f7ba9ea601df7a0c5"
+  }
+]

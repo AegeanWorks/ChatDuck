@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChatDuck, a fast local chat UI for any OpenAI-compatible model server.">
+  <title>ChatDuck</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app">
+    <div class="scrim" id="scrim" hidden></div>
+    <aside class="sidebar" id="sidebar">
+      <header class="sidebar-head">
+        <div>
+          <h1>ChatDuck</h1>
+          <p class="muted" id="server-label">local chat</p>
+        </div>
+        <button class="icon-btn" id="new-chat" type="button" title="New chat" aria-label="New chat">+</button>
+      </header>
+      <label class="search">
+        <span class="sr-only">Search chats</span>
+        <input id="search" type="search" placeholder="Search chats" autocomplete="off">
+      </label>
+      <nav class="chat-list" id="chat-list" aria-label="Chats"></nav>
+      <footer class="sidebar-foot">
+        <button class="ghost-btn" id="settings-btn" type="button">Settings</button>
+        <button class="ghost-btn" id="theme-btn" type="button" title="Switch theme">Theme</button>
+        <span class="status" id="status" role="status">Ready</span>
+      </footer>
+    </aside>
+
+    <main class="main">
+      <header class="main-head">
+        <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Open chats">☰</button>
+        <div class="title-wrap">
+          <h2 id="chat-title">New chat</h2>
+          <span class="muted" id="model-badge">modelduck</span>
+        </div>
+      </header>
+      <section class="messages" id="messages" aria-live="polite"></section>
+      <form class="composer" id="composer">
+        <label class="sr-only" for="prompt">Message</label>
+        <textarea id="prompt" rows="1" placeholder="Ask ChatDuck…" autocomplete="off"></textarea>
+        <button class="stop-btn" id="stop" type="button" hidden>Stop</button>
+        <button class="send-btn" id="send" type="submit">Send</button>
+      </form>
+      <p class="hint">Enter to send · Shift+Enter for a new line · your chats stay in this browser</p>
+    </main>
+  </div>
+
+  <dialog class="settings" id="settings-dialog">
+    <form method="dialog" class="settings-form" id="settings-form">
+      <header>
+        <h2>Settings</h2>
+        <button class="icon-btn" id="settings-close" type="button" aria-label="Close">×</button>
+      </header>
+      <label>Server URL
+        <input id="setting-url" name="url" type="url" required placeholder="http://127.0.0.1:4141" autocomplete="off">
+      </label>
+      <label>API key <span class="muted">(optional; kept for this tab only)</span>
+        <input id="setting-key" name="key" type="password" autocomplete="off" placeholder="Bearer key">
+      </label>
+      <label>Model
+        <input id="setting-model" name="model" list="model-options" autocomplete="off" placeholder="modelduck">
+        <datalist id="model-options"></datalist>
+      </label>
+      <label>System prompt <span class="muted">(optional)</span>
+        <textarea id="setting-system" name="system" rows="3" placeholder="You are a concise coding assistant."></textarea>
+      </label>
+      <div class="row">
+        <label>Temperature
+          <input id="setting-temperature" name="temperature" type="number" min="0" max="2" step="0.05">
+        </label>
+        <label>Max tokens
+          <input id="setting-max" name="max" type="number" min="16" max="8192" step="16">
+        </label>
+      </div>
+      <p class="muted" id="settings-status" role="status"></p>
+      <div class="actions">
+        <button class="ghost-btn" id="test-connection" type="button">Test connection</button>
+        <button class="primary-btn" type="submit" value="save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,5 +1,92 @@
 {
   "version": 1,
-  "active_task": null,
-  "checkpoints": []
+  "active_task": {
+    "task_id": "harden-chatduck",
+    "last_phase": "phase 4",
+    "active_phase": 5,
+    "status": "completed",
+    "updated_at": 1793488848.21813,
+    "owner": "commandcode:1",
+    "started_by": "commandcode:1",
+    "continuations": [],
+    "completed_at": 1793488853.2219439
+  },
+  "checkpoints": [
+    {
+      "task_id": "build-chat-ui",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "[1/1] a dependency-free static OpenAI-compatible chat client: streaming SSE, escaping-first Markdown, code copy, browser-local chats, settings, and a loopback static server; verified with 19 tests and a headless end-to-end stream against a mock server",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793488534.7506807,
+      "timestamp_str": "2026-11-01 02:15:34",
+      "agent": "commandcode:1",
+      "impact_assessment": {
+        "why": "The chat UI is split out of ModelDuck so the model server and tuner stay focused, and the same client can target any OpenAI-compatible server",
+        "benefits": "A fast, inspectable chat front end with no build, no backend and no telemetry; ModelDuck becomes a server and coding tuner",
+        "risks": "contract: a new public app and UI contract; dependency: none; concurrency: none; state: chats in localStorage and the API key in sessionStorage",
+        "mitigation": "Unit tests for the client, storage, Markdown and static server, plus a real headless stream smoke; escaping-first rendering and a loopback-only path guard"
+      }
+    },
+    {
+      "task_id": "build-chat-ui",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "chat client, tests and static server in; headless Edge streamed a mock answer end to end; tests pass, gate 4/4; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793488539.9799218,
+      "timestamp_str": "2026-11-01 02:15:39",
+      "agent": "commandcode:1"
+    },
+    {
+      "task_id": "build-chat-ui",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'build-chat-ui' completed successfully.",
+      "status": "completed",
+      "timestamp": 1793488552.0265903,
+      "timestamp_str": "2026-11-01 02:15:52",
+      "agent": "commandcode:1"
+    },
+    {
+      "task_id": "harden-chatduck",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "[1/1] harden the client: parse CRLF SSE events, raise mid-stream error events, keep live conversation objects while sorting the sidebar, block new chats while streaming, and ignore IME Enter",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793488834.2857976,
+      "timestamp_str": "2026-11-01 02:20:34",
+      "agent": "commandcode:1",
+      "impact_assessment": {
+        "why": "A review found edge cases that would silently drop answers or reorder the chat list incorrectly",
+        "benefits": "Interoperability with CRLF SSE servers, visible server errors, correct sidebar order while a reply streams",
+        "risks": "contract: client stream parsing and UI behavior; dependency: none; concurrency: one stream at a time; state: conversations stay in place",
+        "mitigation": "Failing-first unit tests for CRLF and error events, plus the existing end-to-end stream smoke"
+      }
+    },
+    {
+      "task_id": "harden-chatduck",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "CRLF parsing, mid-stream errors and live chat ordering in; 21 tests pass, gate 4/4; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793488848.21813,
+      "timestamp_str": "2026-11-01 02:20:48",
+      "agent": "commandcode:1"
+    },
+    {
+      "task_id": "harden-chatduck",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'harden-chatduck' completed successfully.",
+      "status": "completed",
+      "timestamp": 1793488853.2219453,
+      "timestamp_str": "2026-11-01 02:20:53",
+      "agent": "commandcode:1"
+    }
+  ]
 }

@@ -1,0 +1,16 @@
+{
+  "name": "chatduck",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A fast, local-first web chat UI for any OpenAI-compatible model server, including ModelDuck.",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node --watch scripts/serve.mjs",
+    "test": "node --test tests"
+  }
+}
