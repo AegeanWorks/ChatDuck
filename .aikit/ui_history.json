@@ -40,5 +40,19 @@
     "final_snapshot_digest": "",
     "final_snapshot_entries": 0,
     "surface_digest": "dd2767b51af721a6c5dd7fd222a11cc254c6b766e7e4ea4f7ba9ea601df7a0c5"
+  },
+  {
+    "schema": 1,
+    "surface": "app",
+    "baseline_commit": "2994f966966a61cce59da030c3f657dfdcc49e02",
+    "contract_hash": "01808a35cdcd13dbb2517f746d030c563f4fd190b2cd45e1564df7bf2727b5ea",
+    "started_at": 1793488968.9128692,
+    "finished_at": 1793488976.1977315,
+    "strikes": 0,
+    "reviewer": "Command Code (AI; final review of the squashed client: headless stream smoke, settings, local chats; no resource errors)",
+    "allowed_removals": [],
+    "final_snapshot_digest": "",
+    "final_snapshot_entries": 0,
+    "surface_digest": "dd2767b51af721a6c5dd7fd222a11cc254c6b766e7e4ea4f7ba9ea601df7a0c5"
   }
 ]
