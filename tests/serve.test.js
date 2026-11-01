@@ -2,9 +2,24 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { createStaticServer, resolveStaticPath } from "../scripts/serve.mjs";
+import { browserOpenCommand, createStaticServer, resolveStaticPath } from "../scripts/serve.mjs";
 
 const PUBLIC = fileURLToPath(new URL("../public", import.meta.url));
+
+test("the open flag uses the platform browser command", () => {
+  assert.deepEqual(browserOpenCommand("win32", "http://127.0.0.1:4173"), {
+    command: "cmd.exe",
+    args: ["/c", "start", "", "http://127.0.0.1:4173"],
+  });
+  assert.deepEqual(browserOpenCommand("darwin", "http://127.0.0.1:4173"), {
+    command: "open",
+    args: ["http://127.0.0.1:4173"],
+  });
+  assert.deepEqual(browserOpenCommand("linux", "http://127.0.0.1:4173"), {
+    command: "xdg-open",
+    args: ["http://127.0.0.1:4173"],
+  });
+});
 
 test("the static path never leaves the public folder", () => {
   assert.ok(resolveStaticPath(PUBLIC, "/").endsWith("index.html"));

@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
@@ -30,6 +31,20 @@ const HEADERS = Object.freeze({
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
 });
+
+/** The command that opens a URL in the default browser. */
+export function browserOpenCommand(platform, url) {
+  if (platform === "win32") return { command: "cmd.exe", args: ["/c", "start", "", url] };
+  if (platform === "darwin") return { command: "open", args: [url] };
+  return { command: "xdg-open", args: [url] };
+}
+
+function openBrowser(url) {
+  const { command, args } = browserOpenCommand(process.platform, url);
+  execFile(command, args, (error) => {
+    if (error) process.stderr.write(`[chatduck] Could not open the browser: ${error.message}\n`);
+  });
+}
 
 /** The file inside `root` for a URL path, or null when it would leave the folder. */
 export function resolveStaticPath(root, urlPath) {
@@ -81,8 +96,19 @@ export function createStaticServer({ root = PUBLIC_DIR } = {}) {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const port = Number(process.env.PORT) || DEFAULT_PORT;
+  const open = process.argv.includes("--open");
   const server = createStaticServer();
+  server.on("error", (error) => {
+    process.stderr.write(
+      error.code === "EADDRINUSE"
+        ? `[chatduck] Port ${port} is already in use. Close the other server or set PORT.\n`
+        : `[chatduck] ${error.message}\n`,
+    );
+    process.exit(1);
+  });
   server.listen(port, "127.0.0.1", () => {
-    process.stdout.write(`ChatDuck on http://127.0.0.1:${port}\n`);
+    const url = `http://127.0.0.1:${port}`;
+    process.stdout.write(`ChatDuck on ${url}\n`);
+    if (open) openBrowser(url);
   });
 }

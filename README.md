@@ -7,11 +7,11 @@ A fast, local-first web chat UI for any OpenAI-compatible model server, includin
 ## ⚡ 30-Second Cold-Start Quick Reference
 
 - **Runtime Prerequisites**: Node.js 20 or newer (only to serve the static files and run the tests). A browser with `fetch` and `ReadableStream`. No `npm install` is needed.
-- **Start it**:
-  ```bash
-  npm start
-  ```
-  Open **http://127.0.0.1:4173**, then **Settings** and enter your server URL, model and API key.
+- **Start it with one click (Windows)**: double-click **`start.bat`**. It starts
+  the local server and opens ChatDuck in your browser.
+  On macOS/Linux run `npm run start:open`, or `npm start` and open
+  **http://127.0.0.1:4173** yourself.
+  Then open **Settings** and enter your server URL, model and API key.
 - **Canonical Regression Shield Gate**:
   ```bash
   npm test
@@ -64,6 +64,7 @@ chatduck/
 │   └── serve.test.js
 ├── package.json
 ├── README.md
+├── start.bat       <- one-click Windows launcher
 └── .aikit/          <- this project's memory: ledger and decisions
 ```
 
@@ -71,6 +72,7 @@ chatduck/
 
 ```bash
 npm start          # serve http://127.0.0.1:4173
+npm run start:open # serve and open the browser (used by start.bat)
 npm run dev        # restart when files change
 npm test           # client, storage, Markdown and static-server tests
 ```
