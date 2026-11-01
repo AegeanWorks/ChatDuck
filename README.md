@@ -70,6 +70,7 @@ chatduck/
 │   └── serve.test.js
 ├── package.json
 ├── README.md
+├── assets/         <- brand logo and social preview
 ├── start.bat       <- one-click Windows launcher
 └── .aikit/          <- this project's memory: ledger and decisions
 ```
