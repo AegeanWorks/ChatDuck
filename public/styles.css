@@ -193,6 +193,7 @@ button { cursor: pointer; }
 /* Main --------------------------------------------------------------------- */
 
 .main {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -269,6 +270,7 @@ button { cursor: pointer; }
 .suggestion:hover { border-color: var(--accent); }
 
 .message {
+  position: relative;
   width: min(780px, 100%);
   margin: 0 auto;
   display: flex;
@@ -355,6 +357,58 @@ button { cursor: pointer; }
 .message-body pre:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
 
 .typing { color: var(--muted); }
+
+.message-actions {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  padding: 0 2px;
+  border-radius: 6px;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.message:hover .message-actions,
+.message:focus-within .message-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.msg-action {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.msg-action:hover, .msg-action:focus-visible {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--panel-2);
+}
+
+.jump-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 104px;
+  transform: translateX(-50%);
+  z-index: 5;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 6px 12px;
+  font-size: 12px;
+  box-shadow: var(--shadow);
+}
+
+.jump-btn:hover { border-color: var(--accent); }
 
 /* Composer ----------------------------------------------------------------- */
 
@@ -514,4 +568,10 @@ button { cursor: pointer; }
   .composer { width: calc(100% - 20px); }
   .hint { width: calc(100% - 20px); }
   .chat-row .delete-btn { opacity: 1; }
+  .message-actions { opacity: 1; pointer-events: auto; }
+  .jump-btn { bottom: 92px; }
+}
+
+@media (hover: none) {
+  .message-actions { opacity: 1; pointer-events: auto; }
 }

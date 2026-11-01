@@ -10,6 +10,7 @@ import {
   MAX_CONVERSATIONS,
   newConversation,
   normalizeSettings,
+  removeTrailingAssistant,
   saveApiKey,
   saveConversations,
   saveSettings,
@@ -77,6 +78,24 @@ test("an invalid stored conversation is dropped, not crashing the app", () => {
   const list = loadConversations(storage);
   assert.equal(list.length, 1);
   assert.deepEqual(list[0].messages, [{ role: "user", content: "hi" }]);
+});
+
+test("regenerate removes exactly one trailing assistant turn", () => {
+  const conversation = newConversation({ id: "regen", now: 10 });
+  appendMessage(conversation, "user", "Why is the sky blue?", 20);
+  appendMessage(conversation, "assistant", "Rayleigh scattering.", 30);
+  appendMessage(conversation, "assistant", "A second trailing answer.", 35);
+  assert.equal(removeTrailingAssistant(conversation, 40), true);
+  assert.deepEqual(conversation.messages, [
+    { role: "user", content: "Why is the sky blue?" },
+    { role: "assistant", content: "Rayleigh scattering." },
+  ]);
+  assert.equal(conversation.updatedAt, 40);
+  assert.equal(removeTrailingAssistant(conversation, 50), true);
+  assert.deepEqual(conversation.messages, [{ role: "user", content: "Why is the sky blue?" }]);
+  assert.equal(conversation.updatedAt, 50);
+  assert.equal(removeTrailingAssistant(conversation, 60), false, "a user turn is not removed");
+  assert.equal(conversation.updatedAt, 50);
 });
 
 test("a new conversation gets a title from its first user message", () => {

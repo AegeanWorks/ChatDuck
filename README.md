@@ -27,7 +27,7 @@ ChatDuck is served from `127.0.0.1:4173`, so the browser treats `127.0.0.1:4141`
 
 ## What it does
 
-- Streams answers token by token, with **Stop** and copyable code blocks.
+- Streams answers token by token, with **Stop**, copyable messages and code blocks, and **Regenerate** for the latest answer. While a reply streams, you can scroll back through the chat and use **Jump to latest** to return.
 - Renders Markdown safely: raw HTML is escaped, only `http(s)` links become links.
 - Keeps chats and search in this browser (`localStorage`); the API key stays in `sessionStorage` and is forgotten when the tab closes.
 - Lists models from `/v1/models`, remembers the server URL and model, and supports a custom system prompt, temperature and max tokens.
@@ -51,6 +51,7 @@ chatduck/
 │   ├── index.html   <- one page: sidebar, chat, settings
 │   ├── app.js       <- state, streaming, chat list, settings
 │   ├── openai.js    <- /v1 client, SSE parsing, errors
+│   ├── chat.js      <- regenerate and scroll predicates
 │   ├── store.js     <- settings and conversation storage rules
 │   ├── markdown.js  <- escaping-first Markdown renderer
 │   ├── favicon.svg  <- the duck mark
@@ -59,6 +60,7 @@ chatduck/
 │   └── serve.mjs    <- dependency-free static server
 ├── tests/
 │   ├── openai.test.js
+│   ├── chat.test.js
 │   ├── markdown.test.js
 │   ├── store.test.js
 │   └── serve.test.js

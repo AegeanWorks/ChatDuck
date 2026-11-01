@@ -132,6 +132,15 @@ export function newConversation({ now = Date.now(), id = null } = {}) {
   return { id: unique, title: "New chat", createdAt: now, updatedAt: now, messages: [] };
 }
 
+/** Remove one trailing assistant turn so regeneration can replay the last user turn. */
+export function removeTrailingAssistant(conversation, now = Date.now()) {
+  if (!conversation || !Array.isArray(conversation.messages)) return false;
+  if (conversation.messages.at(-1)?.role !== "assistant") return false;
+  conversation.messages.pop();
+  conversation.updatedAt = now;
+  return true;
+}
+
 /** Add a message, title the chat from its first user line, and mark it updated. */
 export function appendMessage(conversation, role, content, now = Date.now()) {
   conversation.messages.push({ role, content });

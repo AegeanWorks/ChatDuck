@@ -1,15 +1,15 @@
 {
   "version": 1,
   "active_task": {
-    "task_id": "harden-chatduck",
+    "task_id": "address-chat-review",
     "last_phase": "phase 4",
     "active_phase": 5,
     "status": "completed",
-    "updated_at": 1793488848.21813,
-    "owner": "commandcode:1",
-    "started_by": "commandcode:1",
+    "updated_at": 1793519691.423857,
+    "owner": "kilo:1",
+    "started_by": "kilo:1",
     "continuations": [],
-    "completed_at": 1793488853.2219439
+    "completed_at": 1793519691.9586327
   },
   "checkpoints": [
     {
@@ -87,6 +87,93 @@
       "timestamp": 1793488853.2219453,
       "timestamp_str": "2026-11-01 02:20:53",
       "agent": "commandcode:1"
+    },
+    {
+      "task_id": "polish-chat-actions",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "[1/3] Add a tested store helper for regenerate, then wire message copy, regenerate, scroll lock and jump-to-latest into the chat UI",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793497518.533282,
+      "timestamp_str": "2026-11-01 04:45:18",
+      "agent": "kilo:1",
+      "impact_assessment": {
+        "why": "The chat works, but users cannot copy a message, retry an answer, or read earlier text while a reply streams because every delta forces the view to the bottom",
+        "benefits": "Faster iteration on answers, usable long transcripts during streaming, and familiar chat affordances without new dependencies",
+        "risks": "contract: client UI behavior and assistant-message lifecycle; dependency: none; concurrency: one stream at a time; state: regenerating replaces the trailing assistant message in browser-local history",
+        "mitigation": "Failing-first unit test for the regenerate helper, existing 22-test suite plus project check, and a headless smoke of the served page"
+      }
+    },
+    {
+      "task_id": "polish-chat-actions",
+      "phase": "phase 3",
+      "phase_num": 3,
+      "description": "[2/3] Added removeTrailingAssistant with a failing-first test; store suite 6/6",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793497710.7109127,
+      "timestamp_str": "2026-11-01 04:48:30",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "polish-chat-actions",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "[3/3] UI actions and scroll lock in; 23 tests pass, headless Edge smoke passed stream/copy/regenerate, project gate 4/4; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793498587.7577193,
+      "timestamp_str": "2026-11-01 05:03:07",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "polish-chat-actions",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'polish-chat-actions' completed successfully.",
+      "status": "completed",
+      "timestamp": 1793498588.040012,
+      "timestamp_str": "2026-11-01 05:03:08",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "address-chat-review",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "[1/1] Address the review: gate Regenerate on a valid last turn, remove exactly one trailing assistant, update only the streaming message, make actions overlays without layout shift, and cover the predicates with tests; then run Phase 4 and push",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793519488.5740335,
+      "timestamp_str": "2026-11-01 10:51:28",
+      "agent": "kilo:1",
+      "impact_assessment": {
+        "why": "The review found an inconsistent Regenerate button, ambiguous multi-removal, per-frame replacement of interactive controls, and a cosmetic layout gap",
+        "benefits": "Predictable regenerate behavior, stable Copy/Regenerate controls during streaming, no reserved action row, and tested pure predicates",
+        "risks": "contract: chat view behavior and the new public/chat.js module; dependency: none; concurrency: one stream at a time; state: unchanged browser-local history",
+        "mitigation": "Unit tests for canRegenerate/isNearBottom and removeTrailingAssistant, the 26-test suite, two headless Edge smokes, and the project gate before commit"
+      }
+    },
+    {
+      "task_id": "address-chat-review",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "[1/1] Review fixes in; 26 tests pass, both headless Edge smokes pass, project gate 4/4; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793519691.423857,
+      "timestamp_str": "2026-11-01 10:54:51",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "address-chat-review",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'address-chat-review' completed successfully.",
+      "status": "completed",
+      "timestamp": 1793519691.9586346,
+      "timestamp_str": "2026-11-01 10:54:51",
+      "agent": "kilo:1"
     }
   ]
 }

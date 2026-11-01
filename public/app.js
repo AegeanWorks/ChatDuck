@@ -1,5 +1,6 @@
 import { buildMessages, listModels, normalizeBaseUrl, streamChat } from "./openai.js";
 import { renderMarkdown } from "./markdown.js";
+import { canRegenerate, isNearBottom } from "./chat.js";
 import {
   appendMessage,
   loadApiKey,
@@ -7,6 +8,7 @@ import {
   loadSettings,
   newConversation,
   normalizeSettings,
+  removeTrailingAssistant,
   saveApiKey,
   saveConversations,
   saveSettings,
@@ -42,6 +44,7 @@ const el = {
   chatTitle: $("chat-title"),
   modelBadge: $("model-badge"),
   messages: $("messages"),
+  jump: $("jump-latest"),
   composer: $("composer"),
   prompt: $("prompt"),
   stop: $("stop"),
@@ -69,6 +72,7 @@ const state = {
   streaming: null,
   search: "",
   frame: 0,
+  stickToBottom: true,
 };
 
 const active = () => state.conversations.find((conversation) => conversation.id === state.activeId) ?? null;
@@ -177,16 +181,46 @@ function welcome() {
   return box;
 }
 
+function nearBottom(threshold = 80) {
+  return isNearBottom(el.messages, threshold);
+}
+
+function updateJump() {
+  const overflowing = el.messages.scrollHeight > el.messages.clientHeight + 4;
+  el.jump.hidden = state.stickToBottom || !overflowing;
+}
+
+function addMessageActions(article, message, index, isLast, allowRegenerate) {
+  const actions = document.createElement("div");
+  actions.className = "message-actions";
+  if (message.content) {
+    const copy = Object.assign(document.createElement("button"), { type: "button", className: "msg-action", textContent: "Copy" });
+    copy.dataset.copy = String(index);
+    actions.appendChild(copy);
+  }
+  if (!state.streaming && isLast && allowRegenerate && message.content) {
+    const again = Object.assign(document.createElement("button"), { type: "button", className: "msg-action", textContent: "Regenerate" });
+    again.dataset.regenerate = "1";
+    actions.appendChild(again);
+  }
+  if (actions.childElementCount) article.appendChild(actions);
+}
+
 function renderMessages() {
   const conversation = active();
+  const previousScroll = el.messages.scrollTop;
   el.messages.replaceChildren();
   if (!conversation || !conversation.messages.length) {
     el.messages.appendChild(welcome());
+    state.stickToBottom = true;
+    updateJump();
     return;
   }
-  for (const message of conversation.messages) {
+  const allowRegenerate = canRegenerate(conversation.messages);
+  conversation.messages.forEach((message, index) => {
     const article = document.createElement("article");
     article.className = `message ${message.role}`;
+    article.dataset.index = String(index);
     const role = Object.assign(document.createElement("span"), { className: "role", textContent: message.role === "user" ? "You" : "ChatDuck" });
     const body = document.createElement("div");
     body.className = "message-body";
@@ -200,9 +234,11 @@ function renderMessages() {
       body.textContent = message.content;
     }
     article.append(role, body);
+    addMessageActions(article, message, index, index === conversation.messages.length - 1, allowRegenerate);
     el.messages.appendChild(article);
-  }
-  el.messages.scrollTop = el.messages.scrollHeight;
+  });
+  el.messages.scrollTop = state.stickToBottom ? el.messages.scrollHeight : previousScroll;
+  updateJump();
 }
 
 function renderAll() {
@@ -211,11 +247,38 @@ function renderAll() {
   renderMessages();
 }
 
+function updateStreamingMessage() {
+  const conversation = active();
+  if (!conversation || !conversation.messages.length) {
+    renderMessages();
+    return;
+  }
+  const index = conversation.messages.length - 1;
+  const message = conversation.messages[index];
+  if (message.role !== "assistant") {
+    renderMessages();
+    return;
+  }
+  const article = el.messages.querySelector(`[data-index="${index}"]`);
+  const body = article?.querySelector(".message-body");
+  if (!body) {
+    renderMessages();
+    return;
+  }
+  body.innerHTML = renderMarkdown(message.content);
+  addCopyButtons(body);
+  if (!message.content) {
+    body.appendChild(Object.assign(document.createElement("span"), { className: "typing", textContent: "…" }));
+  }
+  if (state.stickToBottom) el.messages.scrollTop = el.messages.scrollHeight;
+  updateJump();
+}
+
 function scheduleMessages() {
   if (state.frame) return;
   state.frame = requestAnimationFrame(() => {
     state.frame = 0;
-    renderMessages();
+    updateStreamingMessage();
   });
 }
 
@@ -224,6 +287,7 @@ function createChat() {
   const conversation = newConversation();
   state.conversations.unshift(conversation);
   state.activeId = conversation.id;
+  state.stickToBottom = true;
   persist();
   renderAll();
   closeSidebar();
@@ -233,6 +297,7 @@ function createChat() {
 function selectChat(id) {
   if (state.streaming) return;
   state.activeId = id;
+  state.stickToBottom = true;
   renderAll();
   closeSidebar();
   el.prompt.focus();
@@ -240,8 +305,10 @@ function selectChat(id) {
 
 function deleteChat(id) {
   if (state.streaming) return;
+  const wasActive = state.activeId === id;
   state.conversations = state.conversations.filter((conversation) => conversation.id !== id);
-  if (state.activeId === id) state.activeId = state.conversations[0]?.id ?? null;
+  if (wasActive) state.activeId = state.conversations[0]?.id ?? null;
+  if (wasActive) state.stickToBottom = true;
   persist();
   renderAll();
 }
@@ -253,21 +320,13 @@ function setBusy(busy) {
   el.prompt.setAttribute("aria-busy", String(busy));
 }
 
-async function send() {
-  const prompt = el.prompt.value.trim();
-  if (!prompt || state.streaming) return;
-  let conversation = active();
-  if (!conversation) {
-    conversation = newConversation();
-    state.conversations.unshift(conversation);
-    state.activeId = conversation.id;
-  }
-  appendMessage(conversation, "user", prompt);
+async function runTurn(conversation, userText = null) {
+  if (state.streaming) return;
+  if (userText !== null) appendMessage(conversation, "user", userText);
   const assistant = { role: "assistant", content: "" };
   conversation.messages.push(assistant);
   conversation.updatedAt = Date.now();
-  el.prompt.value = "";
-  resizePrompt();
+  state.stickToBottom = true;
   persist();
   renderAll();
   const controller = new AbortController();
@@ -300,6 +359,40 @@ async function send() {
     renderAll();
     el.prompt.focus();
   }
+}
+
+async function send() {
+  const prompt = el.prompt.value.trim();
+  if (!prompt || state.streaming) return;
+  let conversation = active();
+  if (!conversation) {
+    conversation = newConversation();
+    state.conversations.unshift(conversation);
+    state.activeId = conversation.id;
+  }
+  el.prompt.value = "";
+  resizePrompt();
+  await runTurn(conversation, prompt);
+}
+
+async function regenerate() {
+  if (state.streaming) return;
+  const conversation = active();
+  if (!conversation || !canRegenerate(conversation.messages)) return;
+  removeTrailingAssistant(conversation);
+  await runTurn(conversation);
+}
+
+async function copyMessage(index, button) {
+  const message = active()?.messages[index];
+  if (!message) return;
+  try {
+    await navigator.clipboard.writeText(message.content);
+    button.textContent = "Copied";
+  } catch {
+    button.textContent = "Copy failed";
+  }
+  setTimeout(() => { button.textContent = "Copy"; }, 1200);
 }
 
 function stop() {
@@ -424,11 +517,32 @@ function bind() {
     if (select) selectChat(select.dataset.id);
   });
   el.messages.addEventListener("click", (event) => {
+    const copy = event.target.closest("[data-copy]");
+    if (copy) {
+      void copyMessage(Number(copy.dataset.copy), copy);
+      return;
+    }
+    if (event.target.closest("[data-regenerate]")) {
+      void regenerate();
+      return;
+    }
     const suggestion = event.target.closest("[data-prompt]");
     if (!suggestion) return;
     el.prompt.value = suggestion.dataset.prompt;
     resizePrompt();
     el.prompt.focus();
+  });
+  el.messages.addEventListener("scroll", () => {
+    const stick = nearBottom();
+    if (stick !== state.stickToBottom) {
+      state.stickToBottom = stick;
+      updateJump();
+    }
+  });
+  el.jump.addEventListener("click", () => {
+    state.stickToBottom = true;
+    el.messages.scrollTop = el.messages.scrollHeight;
+    updateJump();
   });
   el.menu.addEventListener("click", openSidebar);
   el.scrim.addEventListener("click", closeSidebar);
