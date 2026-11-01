@@ -5,40 +5,40 @@
   "has_ui": true,
   "ui_kind": "web",
   "palette": [
-    "#12070d",
-    "#301213",
-    "#f566a4",
-    "#f5d68e"
+    "#070d13",
+    "#121430",
+    "#5e99f3",
+    "#d990f4"
   ],
   "motif": "orbit",
-  "layout": "terminal",
+  "layout": "split",
   "assets": {
     "logo": {
       "path": "assets/logo.svg",
       "status": "approved",
       "commit": "",
-      "generated_at": "2026-11-01T10:45:15",
+      "generated_at": "2026-11-02T00:53:37",
       "review": {
         "status": "approved",
-        "reviewer": "agent:gemini",
+        "reviewer": "agent:kilo",
         "method": "structural",
-        "notes": "ChatDuck duck chat web UI logo",
-        "score": null,
-        "reviewed_at": "2026-11-01T10:45:23"
+        "notes": "Reseed orbit identity: clean orbital mark, CD monogram resolves the Chronos collision, valid SVG.",
+        "score": 88,
+        "reviewed_at": "2026-11-02T00:54:55"
       }
     },
     "social_preview": {
       "path": "assets/social-preview.svg",
       "status": "approved",
       "commit": "",
-      "generated_at": "2026-11-01T10:45:15",
+      "generated_at": "2026-11-02T00:53:37",
       "review": {
         "status": "approved",
-        "reviewer": "agent:gemini",
+        "reviewer": "agent:kilo",
         "method": "structural",
-        "notes": "ChatDuck web chat interface social banner",
-        "score": null,
-        "reviewed_at": "2026-11-01T10:45:24"
+        "notes": "Split card: Chatduck title, CHAT UI kicker, tagline legible with good contrast, correct URL.",
+        "score": 88,
+        "reviewed_at": "2026-11-02T00:54:55"
       }
     }
   },
