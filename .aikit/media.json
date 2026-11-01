@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "name": "chatduck",
+  "repo": "Chatduck",
+  "has_ui": true,
+  "ui_kind": "web",
+  "palette": [
+    "#12070d",
+    "#301213",
+    "#f566a4",
+    "#f5d68e"
+  ],
+  "motif": "orbit",
+  "layout": "terminal",
+  "assets": {
+    "logo": {
+      "path": "assets/logo.svg",
+      "status": "approved",
+      "commit": "",
+      "generated_at": "2026-11-01T10:45:15",
+      "review": {
+        "status": "approved",
+        "reviewer": "agent:gemini",
+        "method": "structural",
+        "notes": "ChatDuck duck chat web UI logo",
+        "score": null,
+        "reviewed_at": "2026-11-01T10:45:23"
+      }
+    },
+    "social_preview": {
+      "path": "assets/social-preview.svg",
+      "status": "approved",
+      "commit": "",
+      "generated_at": "2026-11-01T10:45:15",
+      "review": {
+        "status": "approved",
+        "reviewer": "agent:gemini",
+        "method": "structural",
+        "notes": "ChatDuck web chat interface social banner",
+        "score": null,
+        "reviewed_at": "2026-11-01T10:45:24"
+      }
+    }
+  },
+  "screenshots": []
+}

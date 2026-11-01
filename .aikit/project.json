@@ -7,7 +7,17 @@
     "aikit-integrated",
     "source-available",
     "aegean-license",
-    "commercial-license"
+    "commercial-license",
+    "chatgpt-ui",
+    "chat-ui",
+    "local-llm",
+    "openai-compatible",
+    "web-app",
+    "local-first",
+    "vanilla-javascript",
+    "modelduck",
+    "privacy-preserving",
+    "offline-first"
   ],
   "gates": {},
   "ui_required": false,
@@ -19,5 +29,7 @@
     "public/index.html"
   ],
   "ui_checked_at": "2026-11-01",
-  "ui_source": "detected"
+  "ui_source": "detected",
+  "topics_source": "manual",
+  "topics_reviewed_at": "2026-11-01"
 }
