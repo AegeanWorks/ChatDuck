@@ -304,53 +304,146 @@ export function normalizeUsage(usage) {
  * (topP, penalties, seed) are omitted when unset so strict servers keep
  * working. Pass `stream: false` for a single non-streaming answer (some
  * servers only support one mode). The full answer text is returned as a
- * plain string. Abort with `signal`.
+ * plain string. Abort with `signal`. A stall timeout aborts hung servers:
+ * `stallTimeoutMs` (default 90000) covers time to first progress and idle
+ * time between progress events; any delta, reasoning, usage, or headers
+ * reset it. `firstByteTimeoutMs`/`idleTimeoutMs` override each phase.
+ * A timeout throws a `TimeoutError` (retryable), never an `AbortError`
+ * (which stays reserved for user Stop/Esc).
  */
-export async function streamChat({ baseUrl, apiKey = "", model, messages, temperature = 0.7, maxTokens = 1024, topP = null, frequencyPenalty = 0, presencePenalty = 0, seed = null, stream = true, signal, fetchImpl = fetch, onDelta = () => {}, onReasoning = () => {}, onUsage = () => {} }) {
+export async function streamChat({ baseUrl, apiKey = "", model, messages, temperature = 0.7, maxTokens = 1024, topP = null, frequencyPenalty = 0, presencePenalty = 0, seed = null, stream = true, signal, stallTimeoutMs = 90000, firstByteTimeoutMs = null, idleTimeoutMs = null, fetchImpl = fetch, onDelta = () => {}, onReasoning = () => {}, onUsage = () => {} }) {
   const payload = { model, messages, stream: stream !== false, temperature, max_tokens: maxTokens };
   if (topP !== null && topP !== undefined && topP !== "") payload.top_p = Number(topP);
   if (Number(frequencyPenalty)) payload.frequency_penalty = Number(frequencyPenalty);
   if (Number(presencePenalty)) payload.presence_penalty = Number(presencePenalty);
   if (seed !== null && seed !== undefined && seed !== "") payload.seed = Number(seed);
-  const response = await fetchImpl(apiUrl(baseUrl, "/v1/chat/completions"), {
-    method: "POST",
-    headers: requestHeaders(apiKey),
-    body: JSON.stringify(payload),
-    signal,
-  });
-  if (!response.ok) throw new Error(await responseError(response));
-  let text = "";
-  let reasoning = "";
-  let usage = null;
-  for await (const part of streamDeltas(response)) {
-    if (part.usage) {
-      usage = normalizeUsage(part.usage);
-      if (usage) onUsage(usage);
-      continue;
+  const firstMs = Number(firstByteTimeoutMs ?? stallTimeoutMs);
+  const idleMs = Number(idleTimeoutMs ?? stallTimeoutMs);
+  const validMs = (value) => Number.isFinite(value) && value > 0;
+  // One controller for the fetch so user Stop and the stall timer share it,
+  // but a flag keeps their errors distinct for the UI.
+  const combined = new AbortController();
+  let timedOut = false;
+  let timer = null;
+  const clearTimer = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
     }
-    if (part.reasoning) {
-      reasoning += part.reasoning;
-      onReasoning(part.reasoning, reasoning);
-      continue;
+  };
+  const arm = (ms) => {
+    clearTimer();
+    if (!validMs(ms)) return;
+    timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        combined.abort(new DOMException("stall timeout", "TimeoutError"));
+      } catch {
+        try {
+          combined.abort();
+        } catch {
+          // Ignore abort failures; the catch below still maps via timedOut.
+        }
+      }
+    }, ms);
+    if (typeof timer.unref === "function") {
+      try {
+        timer.unref();
+      } catch {
+        // Browsers have no unref; ignore.
+      }
     }
-    if (typeof part.delta === "string" && part.delta) {
-      text += part.delta;
-      onDelta(part.delta, text, { reasoning, usage });
+  };
+  const onUserAbort = () => {
+    try {
+      combined.abort(signal?.reason);
+    } catch {
+      // Ignore; the original signal already carries the AbortError.
+    }
+  };
+  try {
+    signal?.addEventListener?.("abort", onUserAbort, { once: true });
+    if (signal?.aborted) onUserAbort();
+    arm(firstMs);
+    const response = await fetchImpl(apiUrl(baseUrl, "/v1/chat/completions"), {
+      method: "POST",
+      headers: requestHeaders(apiKey),
+      body: JSON.stringify(payload),
+      signal: combined.signal,
+    });
+    if (!response.ok) throw new Error(await responseError(response));
+    // Headers are first progress: switch from first-byte to idle budget.
+    arm(idleMs);
+    const poke = () => arm(idleMs);
+    const wrappedDelta = (delta, full, info) => {
+      poke();
+      onDelta(delta, full, info);
+    };
+    const wrappedReasoning = (delta, full) => {
+      poke();
+      onReasoning(delta, full);
+    };
+    const wrappedUsage = (usage) => {
+      poke();
+      onUsage(usage);
+    };
+    let text = "";
+    let reasoning = "";
+    let usage = null;
+    for await (const part of streamDeltas(response)) {
+      if (combined.signal.aborted && timedOut) break;
+      if (part.usage) {
+        usage = normalizeUsage(part.usage);
+        if (usage) wrappedUsage(usage);
+        continue;
+      }
+      if (part.reasoning) {
+        reasoning += part.reasoning;
+        wrappedReasoning(part.reasoning, reasoning);
+        continue;
+      }
+      if (typeof part.delta === "string" && part.delta) {
+        text += part.delta;
+        wrappedDelta(part.delta, text, { reasoning, usage });
+      }
+    }
+    if (timedOut) {
+      const timeoutError = new Error("The server stopped responding");
+      timeoutError.name = "TimeoutError";
+      throw timeoutError;
+    }
+    // Inline <think> fallback: some models stream reasoning inside the content.
+    if (!reasoning) {
+      const split = splitThinking(text);
+      if (split.thinking) {
+        text = split.visible;
+        reasoning = split.thinking;
+      }
+    }
+    // Keep the return value a plain string so existing callers and tests keep
+    // working; reasoning/usage flow through the callbacks and the last call.
+    if (reasoning) wrappedReasoning("", reasoning);
+    if (usage) wrappedUsage(usage);
+    return text;
+  } catch (error) {
+    // Our timer is the only source of TimeoutError: normalize any abort it
+    // caused (reader AbortError, DOMException, etc.) to one retryable error
+    // so runTurn shows ⚠ Retry instead of _(stopped)_.
+    if (timedOut) {
+      if (error?.name === "TimeoutError" && /stopped responding/.test(String(error?.message))) throw error;
+      const timeoutError = new Error("The server stopped responding");
+      timeoutError.name = "TimeoutError";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimer();
+    try {
+      signal?.removeEventListener?.("abort", onUserAbort);
+    } catch {
+      // Ignore cleanup failures.
     }
   }
-  // Inline <think> fallback: some models stream reasoning inside the content.
-  if (!reasoning) {
-    const split = splitThinking(text);
-    if (split.thinking) {
-      text = split.visible;
-      reasoning = split.thinking;
-    }
-  }
-  // Keep the return value a plain string so existing callers and tests keep
-  // working; reasoning/usage flow through the callbacks and the last call.
-  if (reasoning) onReasoning("", reasoning);
-  if (usage) onUsage(usage);
-  return text;
 }
 
 /** The model ids the server lists. */

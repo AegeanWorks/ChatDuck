@@ -17,6 +17,13 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Decision**: `buildMessages` in `public/openai.js` filters assistant turns at send time only: drop `⚠` turns, strip one trailing `_(stopped)_` (skip if empty after), skip the two empty-answer literals, and send `splitThinking(visible)` so stored thinking never reaches the wire. Stored chats, export/import, and retry gating are unchanged.
 - **Consequences**: The wire history stays clean on ModelDuck, Ollama, LM Studio, and plain `/v1/chat/completions` endpoints; the dumbest text-only server sees fewer junk tokens and still receives plain strings. Visible markers and statistics are preserved locally.
 
+### ADR-003: Stall timeout aborts hung completions as retryable errors
+- **Date**: 2026-11-02
+- **Status**: Accepted
+- **Context**: A server can accept a request and then never send bytes (cold Ollama/LM Studio loads, flaky networks). ChatDuck waited forever with only manual Stop, leaving a busy composer and a hanging fetch/reader.
+- **Decision**: `streamChat` in `public/openai.js` arms a stall timer (default 90000ms for first byte and idle, overridable via `stallTimeoutMs`/`firstByteTimeoutMs`/`idleTimeoutMs`; non-positive disables). Headers and every delta/reasoning/usage reset to the idle budget. The timer aborts an internal controller; user Stop uses the caller `signal`. Timeout normalizes to `TimeoutError("The server stopped responding")` so `runTurn` shows retryable `⚠`, while user abort stays `AbortError` → `_(stopped)_`.
+- **Consequences**: Hung ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` requests fail fast and retryable with no server cooperation; text-only/no-usage/no-models behavior is unchanged. A too-short timeout could cut slow cold loads, so defaults are generous and progress resets the clock.
+
 <!-- Entry format:
 ### ADR-NNN: <decision in one line>
 - **Date**: YYYY-MM-DD

@@ -335,3 +335,129 @@ test("UI-only assistant markers never reach the server", () => {
     { role: "assistant", content: "Done" },
   ]);
 });
+
+test("a hung server times out as a retryable TimeoutError", async () => {
+  const fetchImpl = (_url, options = {}) => new Promise((_resolve, reject) => {
+    const sig = options.signal;
+    if (sig?.aborted) {
+      const error = new Error("aborted");
+      error.name = "AbortError";
+      reject(error);
+      return;
+    }
+    sig?.addEventListener("abort", () => {
+      const error = new Error("aborted");
+      error.name = "AbortError";
+      reject(error);
+    }, { once: true });
+  });
+  const error = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "m",
+    messages: [{ role: "user", content: "hi" }],
+    stallTimeoutMs: 20,
+    fetchImpl,
+  }).then(() => null, (failure) => failure);
+  assert.ok(error, "a hung fetch must reject");
+  assert.equal(error.name, "TimeoutError", "timeout is retryable, not AbortError (_(stopped)_)");
+  assert.match(error.message, /stopped responding/);
+});
+
+test("stream progress resets the stall timer", async () => {
+  const fetchImpl = async (_url, options = {}) => {
+    const sig = options.signal;
+    const stream = new ReadableStream({
+      start(controller) {
+        const send = (chunk, delay) => {
+          setTimeout(() => {
+            if (sig?.aborted) return;
+            try {
+              controller.enqueue(encoder.encode(chunk));
+            } catch {
+              // Ignore enqueue after abort.
+            }
+            if (chunk.includes("[DONE]")) {
+              try {
+                controller.close();
+              } catch {
+                // Ignore close after abort.
+              }
+            }
+          }, delay);
+        };
+        // Total 45ms with 15ms gaps: succeeds only when each chunk resets a 25ms budget.
+        send('data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n', 0);
+        send('data: {"choices":[{"delta":{"content":"lo"}}]}\n\n', 15);
+        send("data: [DONE]\n\n", 30);
+        sig?.addEventListener("abort", () => {
+          try {
+            controller.error(sig.reason ?? new Error("aborted"));
+          } catch {
+            // Ignore error after close.
+          }
+        }, { once: true });
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } });
+  };
+  const text = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "m",
+    messages: [{ role: "user", content: "hi" }],
+    stallTimeoutMs: 60,
+    fetchImpl,
+  });
+  assert.equal(text, "Hello");
+});
+
+test("an idle stream times out after the last progress", async () => {
+  const fetchImpl = async (_url, options = {}) => {
+    const sig = options.signal;
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n'));
+        sig?.addEventListener("abort", () => {
+          try {
+            controller.error(sig.reason ?? new Error("aborted"));
+          } catch {
+            // Ignore error after close.
+          }
+        }, { once: true });
+        // Never close: the reader idles until the stall timer aborts it.
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } });
+  };
+  const error = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "m",
+    messages: [{ role: "user", content: "hi" }],
+    stallTimeoutMs: 20,
+    fetchImpl,
+  }).then(() => null, (failure) => failure);
+  assert.ok(error);
+  assert.equal(error.name, "TimeoutError");
+});
+
+test("user abort still reports AbortError with timeouts enabled", async () => {
+  const controller = new AbortController();
+  const fetchImpl = (_url, options = {}) => new Promise((_resolve, reject) => {
+    const sig = options.signal;
+    sig?.addEventListener("abort", () => {
+      const error = new Error("The operation was aborted.");
+      error.name = "AbortError";
+      reject(error);
+    }, { once: true });
+  });
+  setTimeout(() => controller.abort(), 10);
+  const error = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "m",
+    messages: [{ role: "user", content: "hi" }],
+    signal: controller.signal,
+    stallTimeoutMs: 1000,
+    fetchImpl,
+  }).then(() => null, (failure) => failure);
+  assert.ok(error);
+  assert.equal(error.name, "AbortError", "user Stop/Esc must stay _(stopped)_, not TimeoutError");
+});
