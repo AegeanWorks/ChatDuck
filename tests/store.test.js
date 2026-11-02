@@ -2,8 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  allConversationsToJSON,
   API_KEY,
   appendMessage,
+  contextUsage,
+  conversationFromJSON,
+  conversationsFromJSON,
+  conversationToJSON,
+  conversationToMarkdown,
+  deleteMessageAt,
+  duplicateConversation,
+  editUserMessage,
+  estimateConversationTokens,
   loadApiKey,
   loadConversations,
   loadSettings,
@@ -11,9 +21,12 @@ import {
   newConversation,
   normalizeSettings,
   removeTrailingAssistant,
+  renameConversation,
   saveApiKey,
   saveConversations,
   saveSettings,
+  sortConversations,
+  togglePin,
 } from "../public/store.js";
 
 function fakeStorage() {
@@ -32,7 +45,13 @@ test("settings are clamped and survive corrupt storage", () => {
     model: "modelduck",
     systemPrompt: "",
     temperature: 2,
+    topP: 1,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
+    seed: "",
     maxTokens: 16,
+    showThinking: true,
+    autoTitle: false,
     theme: "dark",
   });
   const storage = fakeStorage();
@@ -87,15 +106,117 @@ test("regenerate removes exactly one trailing assistant turn", () => {
   appendMessage(conversation, "assistant", "A second trailing answer.", 35);
   assert.equal(removeTrailingAssistant(conversation, 40), true);
   assert.deepEqual(conversation.messages, [
-    { role: "user", content: "Why is the sky blue?" },
-    { role: "assistant", content: "Rayleigh scattering." },
+    { role: "user", content: "Why is the sky blue?", ts: 20 },
+    { role: "assistant", content: "Rayleigh scattering.", ts: 30 },
   ]);
   assert.equal(conversation.updatedAt, 40);
   assert.equal(removeTrailingAssistant(conversation, 50), true);
-  assert.deepEqual(conversation.messages, [{ role: "user", content: "Why is the sky blue?" }]);
+  assert.deepEqual(conversation.messages, [{ role: "user", content: "Why is the sky blue?", ts: 20 }]);
   assert.equal(conversation.updatedAt, 50);
   assert.equal(removeTrailingAssistant(conversation, 60), false, "a user turn is not removed");
   assert.equal(conversation.updatedAt, 50);
+});
+
+test("edit, delete, rename, duplicate and export manage history", () => {
+  const conversation = newConversation({ id: "hist", now: 10 });
+  appendMessage(conversation, "user", "Hello world", 20);
+  appendMessage(conversation, "assistant", "Hi there", 30);
+  assert.equal(editUserMessage(conversation, 0, "Hello edited", 40), true);
+  assert.deepEqual(conversation.messages, [{ role: "user", content: "Hello edited", ts: 40 }]);
+  appendMessage(conversation, "assistant", "Reply two", 50);
+  assert.equal(deleteMessageAt(conversation, 1, 60), true);
+  assert.equal(conversation.messages.length, 1);
+  renameConversation(conversation, "Renamed", 70);
+  assert.equal(conversation.title, "Renamed");
+  const copy = duplicateConversation(conversation, { now: 80, id: "copy-1" });
+  assert.equal(copy.id, "copy-1");
+  assert.ok(copy.title.includes("(copy)"));
+  assert.ok(conversationToMarkdown(conversation).includes("Renamed"));
+  assert.ok(estimateConversationTokens(conversation) >= 1);
+  assert.equal(editUserMessage(conversation, 5, "nope"), false);
+  assert.equal(deleteMessageAt(conversation, 5), false);
+});
+
+test("images attach to user turns and survive a JSON round trip", () => {
+  const conversation = newConversation({ id: "vision", now: 10 });
+  appendMessage(conversation, "user", "look", 20, ["data:image/jpeg;base64,AAA", "nope"]);
+  assert.equal(conversation.messages[0].images.length, 1);
+  const json = conversationToJSON(conversation);
+  const back = conversationFromJSON(json);
+  assert.equal(back.messages[0].images[0], "data:image/jpeg;base64,AAA");
+  assert.throws(() => conversationFromJSON("{bad"), /./);
+  assert.throws(() => conversationFromJSON(JSON.stringify({ nope: true })), /not a ChatDuck/);
+});
+
+test("editing keeps attached images for the resend", () => {
+  const conversation = newConversation({ id: "img-edit", now: 10 });
+  appendMessage(conversation, "user", "look", 20, ["data:image/png;base64,AAA"]);
+  assert.equal(editUserMessage(conversation, 0, "look closer", 30), true);
+  assert.deepEqual(conversation.messages[0].images, ["data:image/png;base64,AAA"]);
+  assert.equal(conversation.messages[0].content, "look closer");
+});
+
+test("a quota failure still saves the text without images", () => {
+  const backing = fakeStorage();
+  let calls = 0;
+  const tight = {
+    getItem: (key) => backing.getItem(key),
+    setItem: (key, value) => {
+      calls += 1;
+      if (String(value).length > 200) throw new Error("QuotaExceededError");
+      backing.setItem(key, value);
+    },
+    removeItem: (key) => backing.removeItem(key),
+  };
+  const conversation = newConversation({ id: "quota", now: 10 });
+  appendMessage(conversation, "user", "look", 20, [`data:image/png;base64,${"A".repeat(300)}`]);
+  const saved = saveConversations(tight, [conversation]);
+  assert.equal(calls, 2, "retries text-only after the quota error");
+  assert.ok(saved[0].messages[0].images?.length, "the live copy keeps its images");
+  const loaded = loadConversations(tight);
+  assert.equal(loaded[0].messages[0].content, "look");
+  assert.equal(loaded[0].messages[0].images, undefined);
+});
+
+test("timestamps, context meter and backup round trips work", () => {
+  const conversation = newConversation({ id: "ctx", now: 100 });
+  appendMessage(conversation, "user", "hello there", 200);
+  assert.equal(conversation.messages[0].ts, 200);
+  const ctx = contextUsage(conversation, 100);
+  assert.ok(ctx.used >= 1 && ctx.budget === 100 && ctx.percent >= 0);
+  const backup = allConversationsToJSON([conversation]);
+  const restored = conversationsFromJSON(backup);
+  assert.equal(restored.length, 1);
+  assert.equal(restored[0].messages[0].ts, 200);
+  assert.throws(() => conversationsFromJSON("[]"), /not a ChatDuck/);
+});
+
+test("pins sort first, seeds clamp and usage survives", () => {
+  assert.equal(normalizeSettings({ seed: "7" }).seed, 7);
+  assert.equal(normalizeSettings({ seed: "nope" }).seed, "");
+  const older = newConversation({ id: "older", now: 10 });
+  const newer = newConversation({ id: "newer", now: 20 });
+  togglePin(older, 30);
+  assert.equal(older.pinned, true);
+  assert.deepEqual(sortConversations([newer, older]).map((conversation) => conversation.id), ["older", "newer"]);
+  const storage = fakeStorage();
+  saveConversations(storage, [newer, older]);
+  assert.equal(loadConversations(storage)[0].id, "older");
+  const withUsage = { id: "u", title: "U", createdAt: 1, updatedAt: 2, messages: [{ role: "assistant", content: "hi", usage: { prompt: 3, completion: 4, total: 7 } }] };
+  storage.setItem("chatduck.conversations.v1", JSON.stringify([withUsage]));
+  assert.deepEqual(loadConversations(storage)[0].messages[0].usage, { prompt: 3, completion: 4, total: 7 });
+});
+
+test("theme accepts auto and falls back to dark otherwise", () => {
+  assert.equal(normalizeSettings({ theme: "auto" }).theme, "auto");
+  assert.equal(normalizeSettings({ theme: "light" }).theme, "light");
+  assert.equal(normalizeSettings({ theme: "neon" }).theme, "dark");
+});
+
+test("auto-title is opt-in and off by default", () => {
+  assert.equal(normalizeSettings({}).autoTitle, false);
+  assert.equal(normalizeSettings({ autoTitle: true }).autoTitle, true);
+  assert.equal(normalizeSettings({ autoTitle: "yes" }).autoTitle, false);
 });
 
 test("a new conversation gets a title from its first user message", () => {

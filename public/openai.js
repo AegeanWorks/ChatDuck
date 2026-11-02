@@ -33,16 +33,118 @@ export function requestHeaders(apiKey) {
   };
 }
 
+/** Data-URL images attached to a user turn (downscaled JPEG/PNG in the UI). */
+export function normalizeImages(images) {
+  if (!Array.isArray(images)) return [];
+  return images
+    .filter((image) => typeof image === "string" && image.startsWith("data:image/"))
+    .slice(0, 4);
+}
+
+/**
+ * Vision-capable content parts: plain text stays a string for text-only
+ * servers, while turns with images use OpenAI content parts.
+ */
+export function contentParts(text, images = []) {
+  const clean = normalizeImages(images);
+  const body = String(text ?? "");
+  if (!clean.length) return body;
+  const parts = [];
+  if (body.trim()) parts.push({ type: "text", text: body });
+  for (const url of clean) parts.push({ type: "image_url", image_url: { url } });
+  return parts.length ? parts : body;
+}
+
 /** The messages the API receives: an optional system prompt, then the conversation. */
 export function buildMessages({ systemPrompt = "", messages = [] } = {}) {
   const out = [];
   if (String(systemPrompt).trim()) out.push({ role: "system", content: String(systemPrompt).trim() });
   for (const message of messages) {
     if (!message || !["user", "assistant"].includes(message.role)) continue;
-    if (typeof message.content !== "string" || !message.content.trim()) continue;
-    out.push({ role: message.role, content: message.content });
+    const images = message.role === "user" ? normalizeImages(message.images) : [];
+    const text = typeof message.content === "string" ? message.content : "";
+    const content = message.role === "user" ? contentParts(text, images) : text;
+    const empty = typeof content === "string" ? !content.trim() : !content.length;
+    if (empty) continue;
+    out.push({ role: message.role, content });
   }
   return out;
+}
+
+/** Caps for text-file attachments: count per message and chars per file. */
+export const MAX_TEXT_FILES = 3;
+export const MAX_TEXT_ATTACH_CHARS = 12000;
+/** Raw read cap so a huge log cannot freeze the tab before truncation. */
+export const MAX_TEXT_READ_BYTES = 200000;
+
+const TEXT_EXTENSIONS = new Set([
+  "txt", "md", "markdown", "json", "jsonl", "js", "jsx", "ts", "tsx", "mjs", "cjs",
+  "py", "rb", "go", "rs", "java", "c", "h", "cpp", "hpp", "cs", "php", "swift",
+  "kt", "html", "htm", "css", "scss", "xml", "yml", "yaml", "toml", "ini", "cfg",
+  "sh", "bash", "sql", "csv", "tsv", "log", "diff", "patch", "tex", "vue", "svelte",
+]);
+
+/** Lowercase extension of a file name, without the dot. */
+export function attachmentExtension(name) {
+  const base = String(name ?? "").split(/[?#]/)[0].split("/").pop();
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0) return "";
+  return base.slice(dot + 1).toLowerCase();
+}
+
+/** True for plain-text files the chat can inline (images go through vision). */
+export function isTextFile(file) {
+  if (!file) return false;
+  const type = String(file.type ?? "");
+  if (type.startsWith("text/") || type === "application/json") return true;
+  if (type.startsWith("image/")) return false;
+  return TEXT_EXTENSIONS.has(attachmentExtension(file.name));
+}
+
+/** Inline a text file as a labeled fenced block, truncated to the char cap. */
+export function wrapTextAttachment(name, content) {
+  const safeName = String(name ?? "file").slice(0, 120) || "file";
+  const body = String(content ?? "");
+  const truncated = body.length > MAX_TEXT_ATTACH_CHARS
+    ? `${body.slice(0, MAX_TEXT_ATTACH_CHARS)}\n…(truncated ${body.length - MAX_TEXT_ATTACH_CHARS} more chars)`
+    : body;
+  const fence = attachmentExtension(safeName);
+  return `**Attached file: ${safeName}**\n\`\`\`${fence}\n${truncated}\n\`\`\``;
+}
+
+/** Rough token estimate (~4 chars/token) for composer counters and stats. */
+export function estimateTokens(text) {
+  const length = String(text ?? "").length;
+  if (!length) return 0;
+  return Math.max(1, Math.ceil(length / 4));
+}
+
+/** Split `<think>`/`<thinking>` blocks (Qwen/DeepSeek style) from visible content. */
+export function splitThinking(content) {
+  const text = String(content ?? "");
+  const pattern = /<(?:think|thinking|reasoning)[^>]*>([\s\S]*?)(?:<\/(?:think|thinking|reasoning)>|$)/gi;
+  let thinking = "";
+  const visible = text.replace(pattern, (_match, inner) => {
+    thinking += (thinking ? "\n\n" : "") + String(inner ?? "").trim();
+    return "";
+  }).trim();
+  if (!thinking) return { thinking: "", visible: text };
+  return { thinking: thinking.trim(), visible };
+}
+
+/** Extract a reasoning delta from providers that send it outside `content`. */
+export function reasoningOf(choice) {
+  const delta = choice?.delta ?? choice?.message ?? {};
+  const candidates = [
+    delta?.reasoning_content,
+    delta?.reasoning,
+    choice?.reasoning_content,
+    choice?.reasoning,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate) return candidate;
+  }
+  return "";
 }
 
 /** Complete `data:` events in an SSE buffer, and the unfinished tail. */
@@ -79,8 +181,17 @@ async function* streamDeltas(response) {
   const type = response.headers.get("content-type") ?? "";
   if (type.includes("application/json")) {
     const body = await response.json();
-    const content = body?.choices?.[0]?.message?.content;
-    if (typeof content === "string" && content) yield content;
+    const message = body?.choices?.[0]?.message ?? {};
+    const reasoning = reasoningOf(body?.choices?.[0] ?? {});
+    if (reasoning) yield { reasoning };
+    const content = message?.content;
+    if (typeof content === "string" && content) yield { delta: content };
+    else if (Array.isArray(content)) {
+      const text = content.map((part) => (typeof part?.text === "string" ? part.text : "")).join("");
+      if (text) yield { delta: text };
+    }
+    const usage = body?.usage;
+    if (usage) yield { usage };
     return;
   }
   if (!response.body) return;
@@ -105,29 +216,102 @@ async function* streamDeltas(response) {
         const info = event.error;
         throw new Error(info.why ? `${info.message ?? "The server reported an error"} — ${info.why}` : info.message ?? "The server reported an error");
       }
-      const delta = event?.choices?.[0]?.delta?.content ?? event?.choices?.[0]?.message?.content;
-      if (typeof delta === "string" && delta) yield delta;
+      const choice = event?.choices?.[0];
+      const reasoning = reasoningOf(choice);
+      if (reasoning) yield { reasoning };
+      const raw = choice?.delta?.content ?? choice?.message?.content;
+      const delta = Array.isArray(raw)
+        ? raw.map((part) => (typeof part?.text === "string" ? part.text : "")).join("")
+        : raw;
+      if (typeof delta === "string" && delta) yield { delta };
+      if (event?.usage) yield { usage: event.usage };
+    }
+  }
+  const tail = String(buffer ?? "").trim();
+  if (tail) {
+    // Some servers close without [DONE]; try one last JSON event.
+    const compact = tail.replace(/^data:\s*/, "");
+    if (compact && compact !== "[DONE]") {
+      try {
+        const event = JSON.parse(compact);
+        const choice = event?.choices?.[0];
+        const reasoning = reasoningOf(choice);
+        if (reasoning) yield { reasoning };
+        const delta = choice?.delta?.content ?? choice?.message?.content;
+        if (typeof delta === "string" && delta) yield { delta };
+      } catch {
+        // Plain-text tail: keep it rather than dropping the last words.
+        yield { delta: tail };
+      }
     }
   }
 }
 
+/** Normalize a server `usage` block to finite token counts (or nulls). */
+export function normalizeUsage(usage) {
+  const number = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
+  if (!usage || typeof usage !== "object") return null;
+  const prompt = number(usage.prompt_tokens);
+  const completion = number(usage.completion_tokens);
+  const fallback = prompt !== null && completion !== null ? prompt + completion : null;
+  const total = usage.total_tokens === undefined || usage.total_tokens === null ? fallback : number(usage.total_tokens);
+  if (prompt === null && completion === null && total === null) return null;
+  return { prompt, completion, total };
+}
+
 /**
- * Stream a chat completion. `onDelta(delta, fullText)` is called for each piece;
- * the full answer is returned. Abort with `signal`.
+ * Stream a chat completion. `onDelta(delta, fullText)` is called for each text
+ * piece; `onReasoning(delta, fullReasoning)` for thinking traces and
+ * `onUsage(usage)` when the server reports token counts. Extra params
+ * (topP, penalties, seed) are omitted when unset so strict servers keep
+ * working. Pass `stream: false` for a single non-streaming answer (some
+ * servers only support one mode). The full answer text is returned as a
+ * plain string. Abort with `signal`.
  */
-export async function streamChat({ baseUrl, apiKey = "", model, messages, temperature = 0.7, maxTokens = 1024, signal, fetchImpl = fetch, onDelta = () => {} }) {
+export async function streamChat({ baseUrl, apiKey = "", model, messages, temperature = 0.7, maxTokens = 1024, topP = null, frequencyPenalty = 0, presencePenalty = 0, seed = null, stream = true, signal, fetchImpl = fetch, onDelta = () => {}, onReasoning = () => {}, onUsage = () => {} }) {
+  const payload = { model, messages, stream: stream !== false, temperature, max_tokens: maxTokens };
+  if (topP !== null && topP !== undefined && topP !== "") payload.top_p = Number(topP);
+  if (Number(frequencyPenalty)) payload.frequency_penalty = Number(frequencyPenalty);
+  if (Number(presencePenalty)) payload.presence_penalty = Number(presencePenalty);
+  if (seed !== null && seed !== undefined && seed !== "") payload.seed = Number(seed);
   const response = await fetchImpl(apiUrl(baseUrl, "/v1/chat/completions"), {
     method: "POST",
     headers: requestHeaders(apiKey),
-    body: JSON.stringify({ model, messages, stream: true, temperature, max_tokens: maxTokens }),
+    body: JSON.stringify(payload),
     signal,
   });
   if (!response.ok) throw new Error(await responseError(response));
   let text = "";
-  for await (const delta of streamDeltas(response)) {
-    text += delta;
-    onDelta(delta, text);
+  let reasoning = "";
+  let usage = null;
+  for await (const part of streamDeltas(response)) {
+    if (part.usage) {
+      usage = normalizeUsage(part.usage);
+      if (usage) onUsage(usage);
+      continue;
+    }
+    if (part.reasoning) {
+      reasoning += part.reasoning;
+      onReasoning(part.reasoning, reasoning);
+      continue;
+    }
+    if (typeof part.delta === "string" && part.delta) {
+      text += part.delta;
+      onDelta(part.delta, text, { reasoning, usage });
+    }
   }
+  // Inline <think> fallback: some models stream reasoning inside the content.
+  if (!reasoning) {
+    const split = splitThinking(text);
+    if (split.thinking) {
+      text = split.visible;
+      reasoning = split.thinking;
+    }
+  }
+  // Keep the return value a plain string so existing callers and tests keep
+  // working; reasoning/usage flow through the callbacks and the last call.
+  if (reasoning) onReasoning("", reasoning);
+  if (usage) onUsage(usage);
   return text;
 }
 
@@ -143,4 +327,25 @@ export async function listModels({ baseUrl, apiKey = "", fetchImpl = fetch }) {
 export function titleFrom(text, limit = 48) {
   const line = String(text ?? "").split("\n").map((item) => item.trim()).find(Boolean) ?? "New chat";
   return line.length > limit ? `${line.slice(0, limit - 1)}…` : line;
+}
+
+/** Ask the model for a short chat title (best-effort; callers keep the old title on failure). */
+export async function suggestTitle({ baseUrl, apiKey = "", model, userText = "", fetchImpl = fetch } = {}) {
+  const text = await streamChat({
+    baseUrl,
+    apiKey,
+    model,
+    messages: [
+      { role: "system", content: "Name this chat in 6 words or fewer. Reply with only the title, no quotes." },
+      { role: "user", content: String(userText ?? "").slice(0, 500) },
+    ],
+    temperature: 0.3,
+    maxTokens: 32,
+    stream: false,
+    fetchImpl,
+    onDelta: () => {},
+    onReasoning: () => {},
+    onUsage: () => {},
+  });
+  return titleFrom(String(text).replace(/^["']+|["']+$/g, "").trim());
 }

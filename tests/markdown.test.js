@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { renderMarkdown } from "../public/markdown.js";
+import { extractThinking, renderMarkdown } from "../public/markdown.js";
 
 test("raw HTML is escaped before anything else", () => {
   const html = renderMarkdown("<script>alert(1)</script>");
@@ -12,7 +12,9 @@ test("raw HTML is escaped before anything else", () => {
 test("inline code and fenced code are escaped once", () => {
   assert.equal(renderMarkdown("Use `<tag>` here."), "<p>Use <code>&lt;tag&gt;</code> here.</p>");
   const fenced = renderMarkdown("```js\nconst x = '<b>';\n```");
-  assert.ok(fenced.includes("<pre><code>const x = &#39;&lt;b&gt;&#39;;</code></pre>"));
+  assert.ok(fenced.includes("<pre>"));
+  assert.ok(fenced.includes("const x = &#39;&lt;b&gt;&#39;;"));
+  assert.ok(fenced.includes("js"), "language label is shown");
   assert.ok(!fenced.includes("<b>"));
 });
 
@@ -35,6 +37,26 @@ test("headings, bold, lists and quotes render", () => {
 
 test("an unfinished code fence still renders while streaming", () => {
   const html = renderMarkdown("```js\nconst answer = 42;");
-  assert.ok(html.startsWith("<pre><code>"));
+  assert.ok(html.startsWith("<pre>"));
   assert.ok(html.includes("const answer = 42;"));
+});
+
+test("tables, strikethrough, task lists, rules and bare links render", () => {
+  const table = renderMarkdown("| a | b |\n| --- | --- |\n| 1 | 2 |");
+  assert.ok(table.includes("<table>") && table.includes("<th>a</th>"));
+  assert.ok(renderMarkdown("~~gone~~").includes("<del>gone</del>"));
+  const tasks = renderMarkdown("- [x] done\n- [ ] todo");
+  assert.ok(tasks.includes('type="checkbox"') && tasks.includes("todo"));
+  assert.ok(renderMarkdown("---").includes("<hr>"));
+  // hygiene: allow test example URL
+  assert.ok(renderMarkdown("see https://example.test/x").includes('<a href="https://example.test/x"'));
+});
+
+test("think blocks are extracted and never rendered inline", () => {
+  const split = extractThinking("<think>plan first</think>\nFinal answer");
+  assert.equal(split.thinking, "plan first");
+  assert.equal(split.visible, "Final answer");
+  const html = renderMarkdown("<think>secret plan</think>\nVisible");
+  assert.ok(!html.includes("secret plan"));
+  assert.ok(html.includes("Visible"));
 });

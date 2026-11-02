@@ -16,7 +16,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   model: "modelduck",
   systemPrompt: "",
   temperature: 0.7,
+  topP: 1,
+  frequencyPenalty: 0,
+  presencePenalty: 0,
+  seed: "",
   maxTokens: 1024,
+  showThinking: true,
+  autoTitle: false,
   theme: "dark",
 });
 
@@ -27,6 +33,12 @@ const numberIn = (value, min, max, fallback) => {
 
 const text = (value, fallback = "") => (typeof value === "string" ? value : fallback);
 
+const normalizeSeed = (value) => {
+  if (value === null || value === undefined || value === "") return "";
+  const number = Math.floor(Number(value));
+  return Number.isFinite(number) && number >= 0 && number <= 4294967295 ? number : "";
+};
+
 export function normalizeSettings(input) {
   const source = input && typeof input === "object" ? input : {};
   return {
@@ -34,8 +46,14 @@ export function normalizeSettings(input) {
     model: text(source.model, DEFAULT_SETTINGS.model).trim() || DEFAULT_SETTINGS.model,
     systemPrompt: text(source.systemPrompt, DEFAULT_SETTINGS.systemPrompt).slice(0, 4000),
     temperature: numberIn(source.temperature, 0, 2, DEFAULT_SETTINGS.temperature),
+    topP: numberIn(source.topP ?? source.top_p ?? 1, 0, 1, DEFAULT_SETTINGS.topP),
+    frequencyPenalty: numberIn(source.frequencyPenalty ?? source.frequency_penalty ?? 0, -2, 2, DEFAULT_SETTINGS.frequencyPenalty),
+    presencePenalty: numberIn(source.presencePenalty ?? source.presence_penalty ?? 0, -2, 2, DEFAULT_SETTINGS.presencePenalty),
+    seed: normalizeSeed(source.seed),
     maxTokens: numberIn(source.maxTokens, 16, 8192, DEFAULT_SETTINGS.maxTokens),
-    theme: source.theme === "light" ? "light" : "dark",
+    showThinking: source.showThinking === undefined ? true : source.showThinking !== false && source.showThinking !== "false",
+    autoTitle: source.autoTitle === true,
+    theme: ["light", "dark", "auto"].includes(source.theme) ? source.theme : "dark",
   };
 }
 
@@ -79,9 +97,30 @@ export function saveApiKey(session, key) {
   }
 }
 
+export const MAX_IMAGES_PER_MESSAGE = 4;
+
 function normalizeMessage(message) {
   if (!message || !["user", "assistant"].includes(message.role)) return null;
-  return { role: message.role, content: text(message.content) };
+  const content = Array.isArray(message.content)
+    ? message.content.map((part) => (typeof part?.text === "string" ? part.text : "")).join("")
+    : text(message.content);
+  const out = { role: message.role, content };
+  const reasoning = text(message.reasoning);
+  if (reasoning) out.reasoning = reasoning.slice(0, 20000);
+  if (Number.isFinite(Number(message.elapsedMs))) out.elapsedMs = Number(message.elapsedMs);
+  if (Number.isFinite(Number(message.tokensPerSecond))) out.tokensPerSecond = Number(message.tokensPerSecond);
+  if (Number.isFinite(Number(message.ts))) out.ts = Number(message.ts);
+  const usage = message.usage;
+  if (usage && typeof usage === "object") {
+    const number = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
+    const clean = { prompt: number(usage.prompt), completion: number(usage.completion), total: number(usage.total) };
+    if (clean.prompt !== null || clean.completion !== null || clean.total !== null) out.usage = clean;
+  }
+  if (message.role === "user" && Array.isArray(message.images)) {
+    const images = message.images.filter((image) => typeof image === "string" && image.startsWith("data:image/")).slice(0, MAX_IMAGES_PER_MESSAGE);
+    if (images.length) out.images = images;
+  }
+  return out;
 }
 
 function normalizeConversation(conversation) {
@@ -96,30 +135,47 @@ function normalizeConversation(conversation) {
     title: text(conversation.title, "New chat").slice(0, 120) || "New chat",
     createdAt: timestamp(conversation.createdAt),
     updatedAt: timestamp(conversation.updatedAt),
+    pinned: conversation.pinned === true,
     messages,
   };
+}
+
+/** Pinned chats first, then most recently updated. */
+export function sortConversations(list) {
+  return [...list].sort((left, right) => {
+    if (Boolean(left.pinned) !== Boolean(right.pinned)) return left.pinned ? -1 : 1;
+    return right.updatedAt - left.updatedAt;
+  });
 }
 
 export function loadConversations(storage = globalThis.localStorage) {
   const list = parse(storage, CONVERSATIONS_KEY, []);
   if (!Array.isArray(list)) return [];
-  return list
-    .map(normalizeConversation)
-    .filter(Boolean)
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, MAX_CONVERSATIONS);
+  return sortConversations(list.map(normalizeConversation).filter(Boolean)).slice(0, MAX_CONVERSATIONS);
 }
 
 export function saveConversations(storage, conversations) {
-  const list = (Array.isArray(conversations) ? conversations : [])
-    .map(normalizeConversation)
-    .filter(Boolean)
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, MAX_CONVERSATIONS);
+  const list = sortConversations(
+    (Array.isArray(conversations) ? conversations : []).map(normalizeConversation).filter(Boolean),
+  ).slice(0, MAX_CONVERSATIONS);
   try {
     storage?.setItem(CONVERSATIONS_KEY, JSON.stringify(list));
   } catch {
-    // Ignore storage failures.
+    // localStorage quotas (~5MB) are easy to hit with image data-URLs: retry
+    // text-only so the conversation history itself is never lost.
+    try {
+      const slim = list.map((conversation) => ({
+        ...conversation,
+        messages: conversation.messages.map((message) => {
+          if (!message.images) return message;
+          const { images: _dropped, ...rest } = message;
+          return rest;
+        }),
+      }));
+      storage?.setItem(CONVERSATIONS_KEY, JSON.stringify(slim));
+    } catch {
+      // Ignore storage failures.
+    }
   }
   return list;
 }
@@ -142,9 +198,130 @@ export function removeTrailingAssistant(conversation, now = Date.now()) {
 }
 
 /** Add a message, title the chat from its first user line, and mark it updated. */
-export function appendMessage(conversation, role, content, now = Date.now()) {
-  conversation.messages.push({ role, content });
+export function appendMessage(conversation, role, content, now = Date.now(), images = []) {
+  const message = { role, content, ts: now };
+  const clean = Array.isArray(images)
+    ? images.filter((image) => typeof image === "string" && image.startsWith("data:image/")).slice(0, MAX_IMAGES_PER_MESSAGE)
+    : [];
+  if (role === "user" && clean.length) message.images = clean;
+  conversation.messages.push(message);
   if (role === "user" && conversation.title === "New chat") conversation.title = titleFrom(content);
   conversation.updatedAt = now;
   return conversation;
+}
+
+/** Pin or unpin a conversation; pinned chats sort first. */
+export function togglePin(conversation, now = Date.now()) {
+  if (!conversation) return false;
+  conversation.pinned = !conversation.pinned;
+  conversation.updatedAt = now;
+  return conversation.pinned;
+}
+
+/** Rename a conversation (inline pencil in the header). */
+export function renameConversation(conversation, title, now = Date.now()) {
+  const next = String(title ?? "").trim().slice(0, 120);
+  conversation.title = next || "New chat";
+  conversation.updatedAt = now;
+  return conversation;
+}
+
+/** Duplicate a conversation so a branch can be explored safely. */
+export function duplicateConversation(conversation, { now = Date.now(), id = null } = {}) {
+  const unique = id ?? globalThis.crypto?.randomUUID?.() ?? `${now}-${Math.floor(Math.random() * 1e9)}`;
+  return {
+    id: unique,
+    title: `${conversation.title} (copy)`.slice(0, 120),
+    createdAt: now,
+    updatedAt: now,
+    messages: (conversation.messages ?? []).map((message) => ({ ...message })),
+  };
+}
+
+/** Remove one message; used for per-message delete buttons. */
+export function deleteMessageAt(conversation, index, now = Date.now()) {
+  const at = Number(index);
+  if (!conversation || !Array.isArray(conversation.messages)) return false;
+  if (!Number.isInteger(at) || at < 0 || at >= conversation.messages.length) return false;
+  conversation.messages.splice(at, 1);
+  conversation.updatedAt = now;
+  return true;
+}
+
+/**
+ * Replace a user turn and drop everything after it, so "edit & resend"
+ * replays from that point like modern chat UIs.
+ */
+export function editUserMessage(conversation, index, content, now = Date.now()) {
+  const at = Number(index);
+  const next = String(content ?? "").trim();
+  if (!conversation || !Array.isArray(conversation.messages)) return false;
+  if (!Number.isInteger(at) || at < 0 || at >= conversation.messages.length) return false;
+  if (conversation.messages[at]?.role !== "user" || !next) return false;
+  const edited = { role: "user", content: next, ts: now };
+  // Keep vision attachments: the text is re-sent with the same images.
+  if (Array.isArray(conversation.messages[at].images)) edited.images = conversation.messages[at].images;
+  conversation.messages[at] = edited;
+  conversation.messages.splice(at + 1);
+  conversation.updatedAt = now;
+  if (at === 0) conversation.title = titleFrom(next);
+  return true;
+}
+
+/** Export a conversation as Markdown for copy/download. */
+export function conversationToMarkdown(conversation) {
+  const lines = [`# ${conversation?.title || "Chat"}`, ""];
+  for (const message of conversation?.messages ?? []) {
+    lines.push(message.role === "user" ? "## You" : "## ChatDuck");
+    if (message.role === "user" && message.images?.length) lines.push(`_(${message.images.length} image${message.images.length === 1 ? "" : "s"} attached)_`);
+    if (message.reasoning) lines.push("", "> Thinking: " + String(message.reasoning).split("\n").join("\n> "));
+    lines.push("", message.content || "_(empty)_", "");
+  }
+  return lines.join("\n").trim() + "\n";
+}
+
+/** Serialize one conversation for JSON download (images included). */
+export function conversationToJSON(conversation) {
+  return JSON.stringify(normalizeConversation(conversation), null, 2);
+}
+
+/** Parse an imported JSON chat; returns the conversation or throws. */
+export function conversationFromJSON(raw) {
+  const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  const candidate = Array.isArray(parsed) ? parsed[0] : (parsed?.conversations?.[0] ?? parsed);
+  const normalized = normalizeConversation(candidate);
+  if (!normalized) throw new Error("That file is not a ChatDuck chat.");
+  return normalized;
+}
+
+/** Parse an imported backup: one chat or an array of chats. */
+export function conversationsFromJSON(raw) {
+  const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  const candidates = Array.isArray(parsed) ? parsed : [parsed?.conversations ?? parsed];
+  const list = candidates.flat().map(normalizeConversation).filter(Boolean);
+  if (!list.length) throw new Error("That file is not a ChatDuck chat.");
+  return list.slice(0, MAX_CONVERSATIONS);
+}
+
+/** Serialize every conversation for a full backup download. */
+export function allConversationsToJSON(conversations) {
+  const list = (Array.isArray(conversations) ? conversations : [])
+    .map(normalizeConversation)
+    .filter(Boolean);
+  return JSON.stringify(list, null, 2);
+}
+
+/** Context-meter math: estimated tokens against the reply budget. */
+export function contextUsage(conversation, maxTokens) {
+  const used = estimateConversationTokens(conversation);
+  const budget = Number(maxTokens) > 0 ? Number(maxTokens) : 0;
+  const percent = budget > 0 ? Math.min(100, Math.round((used / budget) * 100)) : 0;
+  return { used, budget, percent };
+}
+
+/** Rough token estimate for stats and the composer counter. */
+export function estimateConversationTokens(conversation) {
+  const text = (conversation?.messages ?? []).map((message) => `${message.role} ${message.content} ${message.reasoning ?? ""}`).join("\n");
+  if (!text) return 0;
+  return Math.max(1, Math.ceil(text.length / 4));
 }

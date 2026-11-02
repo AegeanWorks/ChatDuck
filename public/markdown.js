@@ -9,34 +9,85 @@ export const escapeHtml = (value) =>
 
 function inline(escaped) {
   const codes = [];
-  let text = escaped.replace(/`([^`]+)`/g, (_match, code) => {
+  let text = escaped.replace(/`([^`\n]+)`/g, (_match, code) => {
     codes.push(code);
     return `\u0000${codes.length - 1}\u0000`;
   });
   text = text
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label, href) => `<a href="${href}" target="_blank" rel="noreferrer noopener">${label}</a>`)
+    .replace(/(^|[\s(])(https?:\/\/[^\s)<]+)/g, '$1<a href="$2" target="_blank" rel="noreferrer noopener">$2</a>')
+    .replace(/~~([^~]+)~~/g, "<del>$1</del>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,])/g, "$1<em>$2</em>");
   return text.replace(/\u0000(\d+)\u0000/g, (_match, index) => `<code>${codes[Number(index)]}</code>`);
 }
 
+function isTableDivider(line) {
+  const cells = line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+  return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell));
+}
+
+function renderTable(headerLine, rows) {
+  const split = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+  const headers = split(headerLine);
+  const aligns = split(rows[0]).map((cell) => {
+    if (/^:.*:$/.test(cell)) return ' style="text-align:center"';
+    if (/.*:$/.test(cell)) return ' style="text-align:right"';
+    if (/^:/.test(cell)) return ' style="text-align:left"';
+    return "";
+  });
+  const head = `<tr>${headers.map((cell, index) => `<th${aligns[index] ?? ""}>${inline(escapeHtml(cell)) || ""}</th>`).join("")}</tr>`;
+  const body = rows.slice(1).map((line) => {
+    const cells = split(line);
+    return `<tr>${headers.map((_, index) => `<td${aligns[index] ?? ""}>${inline(escapeHtml(cells[index] ?? ""))}</td>`).join("")}</tr>`;
+  }).join("");
+  return `<table>${head}${body ? `<tbody>${body}</tbody>` : ""}</table>`;
+}
+
+/** Extract <think> blocks so streamed reasoning never leaks into the answer. */
+export function extractThinking(input) {
+  const text = String(input ?? "");
+  let thinking = "";
+  const visible = text.replace(/<(?:think|thinking|reasoning)[^>]*>([\s\S]*?)(?:<\/(?:think|thinking|reasoning)>|$)/gi, (_match, inner) => {
+    thinking += (thinking ? "\n\n" : "") + String(inner ?? "").trim();
+    return "";
+  });
+  const trimmed = visible.trim();
+  return { thinking: thinking.trim(), visible: trimmed ? trimmed : (thinking ? "" : text) };
+}
+
 export function renderMarkdown(input) {
-  const lines = String(input ?? "").replace(/\r\n/g, "\n").split("\n");
+  // Thinking traces render separately; never leak them into the answer body.
+  const cleaned = String(input ?? "").replace(/<(?:think|thinking|reasoning)[^>]*>[\s\S]*?(?:<\/(?:think|thinking|reasoning)>|$)/gi, "");
+  const lines = cleaned.replace(/\r\n/g, "\n").split("\n");
   const out = [];
   let fence = null;
   let list = null;
 
+  const renderItem = (item) => {
+    const task = item.match(/^\[([ xX])\]\s+(.*)$/);
+    if (task) {
+      const checked = task[1].toLowerCase() === "x" ? " checked disabled" : " disabled";
+      return `<li class="task"><input type="checkbox"${checked}>${inline(escapeHtml(task[2]))}</li>`;
+    }
+    return `<li>${inline(escapeHtml(item))}</li>`;
+  };
+
   const flushList = () => {
     if (!list) return;
-    out.push(`<${list.tag}>${list.items.map((item) => `<li>${inline(escapeHtml(item))}</li>`).join("")}</${list.tag}>`);
+    out.push(`<${list.tag}>${list.items.map(renderItem).join("")}</${list.tag}>`);
     list = null;
   };
 
-  for (const line of lines) {
+  const fenceLang = { value: "" };
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     if (fence !== null) {
       if (line.trim().startsWith("```")) {
-        out.push(`<pre><code>${escapeHtml(fence.join("\n"))}</code></pre>`);
+        const label = fenceLang.value ? `<span class="code-lang">${escapeHtml(fenceLang.value)}</span>` : "";
+        out.push(`<pre>${label}<code>${escapeHtml(fence.join("\n"))}</code></pre>`);
         fence = null;
+        fenceLang.value = "";
       } else {
         fence.push(line);
       }
@@ -45,10 +96,29 @@ export function renderMarkdown(input) {
     if (line.trim().startsWith("```")) {
       flushList();
       fence = [];
+      fenceLang.value = line.trim().slice(3).trim().split(/\s+/)[0] ?? "";
+      continue;
+    }
+    // GFM tables: header | divider | rows.
+    if (line.includes("|") && index + 1 < lines.length && isTableDivider(lines[index + 1])) {
+      flushList();
+      const rows = [lines[index + 1]];
+      let cursor = index + 2;
+      while (cursor < lines.length && lines[cursor].includes("|") && lines[cursor].trim()) {
+        rows.push(lines[cursor]);
+        cursor += 1;
+      }
+      out.push(renderTable(line, rows));
+      index = cursor - 1;
       continue;
     }
     if (!line.trim()) {
       flushList();
+      continue;
+    }
+    if (/^\s*(---|\*\*\*|___)\s*$/.test(line)) {
+      flushList();
+      out.push("<hr>");
       continue;
     }
     const heading = line.match(/^(#{1,6})\s+(.*)$/);
@@ -86,6 +156,9 @@ export function renderMarkdown(input) {
     out.push(`<p>${inline(escapeHtml(line))}</p>`);
   }
   flushList();
-  if (fence !== null) out.push(`<pre><code>${escapeHtml(fence.join("\n"))}</code></pre>`);
+  if (fence !== null) {
+    const label = fenceLang.value ? `<span class="code-lang">${escapeHtml(fenceLang.value)}</span>` : "";
+    out.push(`<pre>${label}<code>${escapeHtml(fence.join("\n"))}</code></pre>`);
+  }
   return out.join("\n");
 }

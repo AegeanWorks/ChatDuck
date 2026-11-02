@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canRegenerate, isNearBottom } from "../public/chat.js";
+import { canEditMessage, canRegenerate, editReplayFrom, isNearBottom, modelOptions } from "../public/chat.js";
 
 test("regenerate is offered only for an assistant answer that follows a user turn", () => {
   assert.equal(canRegenerate([{ role: "user" }, { role: "assistant" }]), true);
@@ -12,12 +12,27 @@ test("regenerate is offered only for an assistant answer that follows a user tur
   assert.equal(canRegenerate(null), false);
 });
 
+test("error answers offer a retry and user turns offer edit", () => {
+  assert.equal(canRegenerate([{ role: "user" }, { role: "assistant", content: "⚠ boom" }]), true);
+  assert.equal(canEditMessage({ role: "user", content: "hi" }), true);
+  assert.equal(canEditMessage({ role: "assistant", content: "hi" }), false);
+  assert.equal(editReplayFrom([{ role: "user" }], 0), true);
+  assert.equal(editReplayFrom([{ role: "assistant" }], 0), false);
+});
+
 test("consecutive assistant turns do not offer a regenerate that would no-op", () => {
   assert.equal(canRegenerate([
     { role: "user" },
     { role: "assistant" },
     { role: "assistant" },
   ]), false);
+});
+
+test("the model picker lists the current model first and dedupes", () => {
+  assert.deepEqual(modelOptions("b", ["a", "b", "a"]), ["b", "a"]);
+  assert.deepEqual(modelOptions("  b ", [null, "", "b"]), ["b"]);
+  assert.deepEqual(modelOptions("", []), []);
+  assert.deepEqual(modelOptions(null, ["a"]), ["a"]);
 });
 
 test("the scroll box is near the bottom only within the threshold", () => {

@@ -44,6 +44,10 @@ test("the static server serves the app and refuses other methods", async (t) => 
   assert.equal(script.status, 200);
   assert.match(script.headers.get("content-type"), /javascript/);
 
+  const manifest = await fetch(`${base}/manifest.webmanifest`);
+  assert.equal(manifest.status, 200);
+  assert.match(manifest.headers.get("content-type"), /manifest/);
+
   const missing = await fetch(`${base}/nope.js`);
   assert.equal(missing.status, 404);
   const traversal = await fetch(`${base}/%2e%2e/package.json`);

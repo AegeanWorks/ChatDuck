@@ -31,12 +31,25 @@ ChatDuck is served from `127.0.0.1:4173`, so the browser treats `127.0.0.1:4141`
 
 ## What it does
 
-- Streams answers token by token, with **Stop**, copyable messages and code blocks, and **Regenerate** for the latest answer. While a reply streams, you can scroll back through the chat and use **Jump to latest** to return.
-- Renders Markdown safely: raw HTML is escaped, only `http(s)` links become links.
+- Streams answers token by token, with **Stop** (or `Esc`), copyable messages and code blocks, and **Regenerate / Retry** for the latest answer. Failed requests show a one-click **Retry**. While a reply streams, you can scroll back through the chat and use **Jump to latest** to return.
+- **Edit & resend**: every user message has **Edit**, which replaces it, drops later replies, and replays from there. Every message has **Copy** and **Delete**.
+- **Thinking traces**: `reasoning_content` deltas and `<think>` blocks (Qwen, DeepSeek-R1 style) render in a collapsible *Thinking* section, toggleable in Settings, so they never leak into the answer.
+- **Vision**: attach up to 4 images per message (📎 button, paste, or drag-and-drop) for vision-capable models; images are downscaled locally and sent as OpenAI content parts. Text-only servers keep receiving plain strings.
+- **Text files**: attach up to 3 code/text files per message — they are inlined as labeled fenced blocks (truncated at 12k chars with a note), so any server can read them with no special API.
+- **Conversation tools**: rename (✎ in the header), duplicate, per-chat token estimate, last-reply latency and tok/s, **Export** (copy as Markdown) and **↓ .md** download (Shift-click for JSON with images), **Import** for chat JSON files, plus a live character/token counter in the composer.
+- **Shortcuts**: `Ctrl/⌘+K` new chat, `/` focuses search, `Esc` cancels edits, stops streaming, or closes the sidebar. Suggestion cards send immediately, and the model list refreshes whenever Settings opens.
+- Renders Markdown safely: raw HTML is escaped; tables, task lists, strikethrough, `---` rules, bare `http(s)` links, and fenced code with language labels are supported.
 - Keeps chats and search in this browser (`localStorage`); the API key stays in `sessionStorage` and is forgotten when the tab closes.
-- Lists models from `/v1/models`, remembers the server URL and model, and supports a custom system prompt, temperature and max tokens.
+- Lists models from `/v1/models`, remembers the server URL and model, and supports a custom system prompt (or a one-click preset: coding assistant, explainer, reviewer, summarizer), temperature, top-p, frequency/presence penalties, an optional seed and max tokens.
+- Model picker in the header: switch models without opening Settings; the list refreshes from the server automatically.
+- Opt-in AI titles: Settings can ask the model for a short title after the first exchange, replacing the first-line title (kept on any failure).
+- Server token counts: when the server reports `usage`, replies show real `in · out` numbers instead of estimates.
+- Pinned chats: star any conversation to keep it at the top of the sidebar above recency order.
+- Context meter in the header estimates token usage against the reply budget (warns past 80%); every message shows its send time.
+- Library controls in Settings: **Backup all** downloads every chat as one JSON file, **Import** restores single chats or full backups, and **Clear all…** wipes the library with confirmation.
+- Installable: ships a web manifest so it can be added to the home screen / app list like a native chat app.
 - Works with one or several servers by changing the URL in Settings.
-- Light and dark themes, a responsive sidebar, and no network requests except to the server you configure.
+- Light, dark, and follow-system themes, a responsive sidebar, and no network requests except to the server you configure.
 
 ## Privacy and security
 
@@ -53,11 +66,12 @@ chatduck/
 ├── REUSE.toml
 ├── public/
 │   ├── index.html   <- one page: sidebar, chat, settings
-│   ├── app.js       <- state, streaming, chat list, settings
-│   ├── openai.js    <- /v1 client, SSE parsing, errors
-│   ├── chat.js      <- regenerate and scroll predicates
-│   ├── store.js     <- settings and conversation storage rules
-│   ├── markdown.js  <- escaping-first Markdown renderer
+│   ├── manifest.webmanifest <- installable-app metadata
+│   ├── app.js       <- state, streaming, edit/retry/export, settings
+│   ├── openai.js    <- /v1 client, SSE parsing, reasoning, vision parts, errors
+│   ├── chat.js      <- regenerate/edit and scroll predicates
+│   ├── store.js     <- settings, history ops (rename/duplicate/edit/export)
+│   ├── markdown.js  <- escaping-first Markdown renderer + tables/think
 │   ├── favicon.svg  <- the duck mark
 │   └── styles.css   <- responsive dark/light theme
 ├── scripts/

@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="ChatDuck, a fast local chat UI for any OpenAI-compatible model server.">
+  <meta name="theme-color" content="#0f1115">
   <title>ChatDuck</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -27,6 +29,8 @@
       <footer class="sidebar-foot">
         <button class="ghost-btn" id="settings-btn" type="button">Settings</button>
         <button class="ghost-btn" id="theme-btn" type="button" title="Switch theme">Theme</button>
+        <button class="ghost-btn" id="import-btn" type="button" title="Import a chat JSON file">Import</button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
         <span class="status" id="status" role="status">Ready</span>
       </footer>
     </aside>
@@ -36,18 +40,30 @@
         <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Open chats">☰</button>
         <div class="title-wrap">
           <h2 id="chat-title">New chat</h2>
-          <span class="muted" id="model-badge">modelduck</span>
+          <button class="mini-btn" id="rename-btn" type="button" title="Rename chat" aria-label="Rename chat">✎</button>
+          <select id="model-badge" class="model-badge" aria-label="Model"></select>
+        </div>
+        <div class="head-actions">
+          <span class="ctx" title="Estimated context vs the reply budget"><span class="ctx-fill" id="ctx-fill"></span></span>
+          <span class="muted stats" id="chat-stats"></span>
+          <button class="ghost-btn small" id="duplicate-btn" type="button" title="Duplicate this chat">Duplicate</button>
+          <button class="ghost-btn small" id="export-btn" type="button" title="Copy as Markdown">Export</button>
+          <button class="ghost-btn small" id="download-btn" type="button" title="Download as Markdown">↓ .md</button>
         </div>
       </header>
       <section class="messages" id="messages" aria-live="polite"></section>
       <button class="jump-btn" id="jump-latest" type="button" hidden>Jump to latest</button>
+      <div class="attach-strip" id="attach-strip" hidden></div>
       <form class="composer" id="composer">
         <label class="sr-only" for="prompt">Message</label>
-        <textarea id="prompt" rows="1" placeholder="Ask ChatDuck…" autocomplete="off"></textarea>
+        <button class="icon-btn attach-btn" id="attach-btn" type="button" title="Attach images or text files" aria-label="Attach files">📎</button>
+        <input id="attach-file" type="file" accept="image/*,.txt,.md,.markdown,.json,.jsonl,.js,.jsx,.ts,.tsx,.py,.csv,.log,.html,.css,.xml,.yml,.yaml,.toml,.sh,.sql" multiple hidden>
+        <textarea id="prompt" rows="1" placeholder="Ask ChatDuck… (paste or drop images and text files)" autocomplete="off"></textarea>
+        <span class="muted counter" id="prompt-count"></span>
         <button class="stop-btn" id="stop" type="button" hidden>Stop</button>
         <button class="send-btn" id="send" type="submit">Send</button>
       </form>
-      <p class="hint">Enter to send · Shift+Enter for a new line · your chats stay in this browser</p>
+      <p class="hint">Enter to send · Shift+Enter for a new line · Esc stops · Ctrl+K new chat · / searches · your chats stay in this browser</p>
     </main>
   </div>
 
@@ -67,6 +83,9 @@
         <input id="setting-model" name="model" list="model-options" autocomplete="off" placeholder="modelduck">
         <datalist id="model-options"></datalist>
       </label>
+      <label>System preset
+        <select id="setting-preset" name="preset"></select>
+      </label>
       <label>System prompt <span class="muted">(optional)</span>
         <textarea id="setting-system" name="system" rows="3" placeholder="You are a concise coding assistant."></textarea>
       </label>
@@ -74,9 +93,36 @@
         <label>Temperature
           <input id="setting-temperature" name="temperature" type="number" min="0" max="2" step="0.05">
         </label>
+        <label>Top-p
+          <input id="setting-topp" name="topP" type="number" min="0" max="1" step="0.05">
+        </label>
         <label>Max tokens
           <input id="setting-max" name="max" type="number" min="16" max="8192" step="16">
         </label>
+      </div>
+      <div class="row">
+        <label>Frequency penalty
+          <input id="setting-freq" name="frequencyPenalty" type="number" min="-2" max="2" step="0.1">
+        </label>
+        <label>Presence penalty
+          <input id="setting-presence" name="presencePenalty" type="number" min="-2" max="2" step="0.1">
+        </label>
+        <label>Seed <span class="muted">(optional)</span>
+          <input id="setting-seed" name="seed" type="number" min="0" max="4294967295" step="1" placeholder="random">
+        </label>
+      </div>
+      <label class="check">Show thinking traces
+        <input id="setting-thinking" name="showThinking" type="checkbox">
+      </label>
+      <label class="check">Auto-title chats with AI
+        <input id="setting-autotitle" name="autoTitle" type="checkbox">
+      </label>
+      <div class="data-zone">
+        <span class="muted">Library</span>
+        <div class="actions start">
+          <button class="ghost-btn" id="backup-btn" type="button" title="Download every chat as one JSON file">Backup all</button>
+          <button class="ghost-btn danger" id="clear-all-btn" type="button" title="Delete every chat in this browser">Clear all…</button>
+        </div>
       </div>
       <p class="muted" id="settings-status" role="status"></p>
       <div class="actions">
