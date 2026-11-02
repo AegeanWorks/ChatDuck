@@ -210,6 +210,9 @@ async function* streamDeltas(response) {
       try {
         event = JSON.parse(data);
       } catch {
+        // Raw-text SSE (no JSON envelope): keep the words instead of
+        // showing nothing until the stream closes.
+        if (data) yield { delta: data };
         continue;
       }
       if (event?.error) {
@@ -240,8 +243,15 @@ async function* streamDeltas(response) {
         const delta = choice?.delta?.content ?? choice?.message?.content;
         if (typeof delta === "string" && delta) yield { delta };
       } catch {
-        // Plain-text tail: keep it rather than dropping the last words.
-        yield { delta: tail };
+        // Plain-text tail: strip SSE framing, but drop fragments that look
+        // like truncated JSON instead of leaking protocol syntax.
+        const plain = tail
+          .split("\n")
+          .map((line) => line.replace(/^data:\s?/, "").trim())
+          .filter((line) => line && line !== "[DONE]")
+          .join("\n")
+          .trim();
+        if (plain && !/^[[{]/.test(plain)) yield { delta: plain };
       }
     }
   }

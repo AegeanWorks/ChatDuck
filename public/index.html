@@ -41,7 +41,7 @@
         <div class="title-wrap">
           <h2 id="chat-title">New chat</h2>
           <button class="mini-btn" id="rename-btn" type="button" title="Rename chat" aria-label="Rename chat">✎</button>
-          <select id="model-badge" class="model-badge" aria-label="Model"></select>
+          <select id="model-badge" class="model-badge" aria-label="Model"><option>modelduck</option></select>
         </div>
         <div class="head-actions">
           <span class="ctx" title="Estimated context vs the reply budget"><span class="ctx-fill" id="ctx-fill"></span></span>
@@ -84,7 +84,13 @@
         <datalist id="model-options"></datalist>
       </label>
       <label>System preset
-        <select id="setting-preset" name="preset"></select>
+        <select id="setting-preset" name="preset">
+          <option value="custom">Custom</option>
+          <option value="concise">Concise coding assistant</option>
+          <option value="explainer">Plain-language explainer</option>
+          <option value="reviewer">Careful code reviewer</option>
+          <option value="summarizer">Sharp summarizer</option>
+        </select>
       </label>
       <label>System prompt <span class="muted">(optional)</span>
         <textarea id="setting-system" name="system" rows="3" placeholder="You are a concise coding assistant."></textarea>

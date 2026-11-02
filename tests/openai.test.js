@@ -242,6 +242,31 @@ test("text files are detected and wrapped as truncated fenced blocks", () => {
   assert.ok(long.includes("truncated 10 more chars"));
 });
 
+test("raw-text SSE streams through and truncated JSON never leaks framing", async () => {
+  const raw = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "modelduck",
+    messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(["data: Hello\n\n", "data: world\n\n"]),
+  });
+  assert.ok(raw.includes("Hello") && raw.includes("world"));
+  assert.ok(!raw.includes("data:"), "no protocol syntax in the answer");
+  const truncated = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "modelduck",
+    messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(['data: {"choices":[{"delta":{"content":"Hel']),
+  });
+  assert.equal(truncated, "");
+  const noDone = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "modelduck",
+    messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(['data: {"choices":[{"delta":{"content":"Late"}}]}\n\n']),
+  });
+  assert.equal(noDone, "Late");
+});
+
 test("the model list and conversation titles are read from the API", async () => {
   const models = await listModels({
     baseUrl: "http://127.0.0.1:4141",

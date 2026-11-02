@@ -1,5 +1,5 @@
 import { buildMessages, estimateTokens, isTextFile, listModels, MAX_TEXT_FILES, MAX_TEXT_READ_BYTES, normalizeBaseUrl, streamChat, suggestTitle, titleFrom, wrapTextAttachment } from "./openai.js";
-import { escapeHtml, extractThinking, renderMarkdown } from "./markdown.js";
+import { extractThinking, renderMarkdown } from "./markdown.js";
 import { canEditMessage, canRegenerate, isNearBottom, modelOptions } from "./chat.js";
 import {
   allConversationsToJSON,
@@ -1074,7 +1074,13 @@ function toggleTheme() {
 
 function openSidebar() {
   el.sidebar.classList.add("open");
-  el.scrim.hidden = false;
+  // The scrim only exists on narrow screens where the sidebar is off-canvas;
+  // on desktop it would just darken the app for no reason.
+  try {
+    el.scrim.hidden = !window.matchMedia("(max-width: 760px)").matches;
+  } catch {
+    el.scrim.hidden = false;
+  }
 }
 
 function closeSidebar() {
