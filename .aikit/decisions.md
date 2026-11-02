@@ -24,6 +24,13 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Decision**: `streamChat` in `public/openai.js` arms a stall timer (default 90000ms for first byte and idle, overridable via `stallTimeoutMs`/`firstByteTimeoutMs`/`idleTimeoutMs`; non-positive disables). Headers and every delta/reasoning/usage reset to the idle budget. The timer aborts an internal controller; user Stop uses the caller `signal`. Timeout normalizes to `TimeoutError("The server stopped responding")` so `runTurn` shows retryable `⚠`, while user abort stays `AbortError` → `_(stopped)_`.
 - **Consequences**: Hung ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` requests fail fast and retryable with no server cooperation; text-only/no-usage/no-models behavior is unchanged. A too-short timeout could cut slow cold loads, so defaults are generous and progress resets the clock.
 
+### ADR-004: First screenshot keepers show the honest unconfigured state
+- **Date**: 2026-11-03
+- **Status**: Accepted
+- **Context**: ChatDuck had approved orbit/CD brand (6/6) but `assets/screenshots/` did not exist and `media.json screenshots: []`; a chat UI cannot show a real reply without a model server, so any conversation capture would be staged.
+- **Decision**: Capture `npm start` at `http://127.0.0.1:4173` with no model server running: `2026-11-03-chat.png` (empty library, suggestion cards, composer, Offline status) and `2026-11-03-settings.png` (server URL/key/model/preset/prompt/sampling/library after opening Settings). Record commit `f2c1c0b`, date and viewport 1440x900 in `.aikit/media.json` and the README `aegean:screenshots` block.
+- **Consequences**: README proves the real first-run path including the documented ModelDuck connection flow; no reply is shown because none could honestly exist. Reproduce with: `npm start`, open the URL, screenshot, click Settings, screenshot.
+
 <!-- Entry format:
 ### ADR-NNN: <decision in one line>
 - **Date**: YYYY-MM-DD

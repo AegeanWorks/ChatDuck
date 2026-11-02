@@ -116,3 +116,13 @@ npm test           # client, storage, Markdown and static-server tests
 ## License
 
 Free for personal use under the Aegean License 1.1 (AL-1.1); see [LICENSE](LICENSE). Any commercial use needs the Aegean Commercial License 1.0 (ACL-1.0); see [COMMERCIAL.md](COMMERCIAL.md).
+
+<!-- aegean:screenshots:start -->
+## Screenshots
+
+<a href="https://github.com/AegeanWorks/Chatduck/commit/f2c1c0b"><img src="assets/screenshots/2026-11-03-chat.png" alt="ChatDuck new chat at 2026-11-03"></a>
+
+<a href="https://github.com/AegeanWorks/Chatduck/commit/f2c1c0b"><img src="assets/screenshots/2026-11-03-settings.png" alt="ChatDuck settings at 2026-11-03"></a>
+
+*commit `f2c1c0b` · 2026-11-03 · viewport 1440x900 · captured with no model server running (Offline is the honest fresh state)*
+<!-- aegean:screenshots:end -->

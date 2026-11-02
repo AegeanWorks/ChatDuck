@@ -42,5 +42,44 @@
       }
     }
   },
-  "screenshots": []
+  "screenshots": [
+    {
+      "path": "assets/screenshots/2026-11-03-chat.png",
+      "alt": "ChatDuck new chat at 2026-11-03",
+      "caption": "Fresh chat from npm start (http://127.0.0.1:4173) with no model server running: empty library, suggestion cards, composer; sidebar shows Offline. Main-panel 'Connected to' line is the app's own optimistic copy.",
+      "commit": "f2c1c0b47c93884e396eac44c5ba1f5173c8bf42",
+      "taken_at": "2026-11-03",
+      "viewport": "1440x900",
+      "width": 1440,
+      "height": 900,
+      "status": "approved",
+      "review": {
+        "status": "approved",
+        "reviewer": "agent:kilo",
+        "method": "vision",
+        "notes": "Real 1440x900 viewport capture of the unconfigured fresh-user state: sidebar, model picker, suggestions, composer and Offline status all legible; no server was running so no reply could be faked.",
+        "score": 92,
+        "reviewed_at": "2026-11-03"
+      }
+    },
+    {
+      "path": "assets/screenshots/2026-11-03-settings.png",
+      "alt": "ChatDuck settings at 2026-11-03",
+      "caption": "Same build after opening Settings: server URL, API key, model, system preset and prompt, sampling controls, thinking traces toggle, library backup and clear.",
+      "commit": "f2c1c0b47c93884e396eac44c5ba1f5173c8bf42",
+      "taken_at": "2026-11-03",
+      "viewport": "1440x900",
+      "width": 1440,
+      "height": 900,
+      "status": "approved",
+      "review": {
+        "status": "approved",
+        "reviewer": "agent:kilo",
+        "method": "vision",
+        "notes": "Real settings dialog one click from the fresh path: every first-run field visible and honest; proves the documented ModelDuck/Ollama/LM Studio connection flow.",
+        "score": 91,
+        "reviewed_at": "2026-11-03"
+      }
+    }
+  ]
 }
