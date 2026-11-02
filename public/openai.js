@@ -55,6 +55,21 @@ export function contentParts(text, images = []) {
   return parts.length ? parts : body;
 }
 
+/** UI-only assistant markers that stay visible locally but never reach the server. */
+const STOPPED_SUFFIX = "_(stopped)_";
+const EMPTY_ANSWER_MARKERS = new Set([
+  "_(the server returned an empty answer)_",
+  "_(the server returned reasoning without a final answer)_",
+]);
+
+/** Strip one trailing stopped marker, reversing runTurn's `_(stopped)_` suffix. */
+function withoutStoppedMarker(text) {
+  const body = String(text ?? "");
+  if (body.endsWith(`\n\n${STOPPED_SUFFIX}`)) return body.slice(0, -(`\n\n${STOPPED_SUFFIX}`.length));
+  if (body.endsWith(STOPPED_SUFFIX)) return body.slice(0, -STOPPED_SUFFIX.length);
+  return body;
+}
+
 /** The messages the API receives: an optional system prompt, then the conversation. */
 export function buildMessages({ systemPrompt = "", messages = [] } = {}) {
   const out = [];
@@ -63,7 +78,20 @@ export function buildMessages({ systemPrompt = "", messages = [] } = {}) {
     if (!message || !["user", "assistant"].includes(message.role)) continue;
     const images = message.role === "user" ? normalizeImages(message.images) : [];
     const text = typeof message.content === "string" ? message.content : "";
-    const content = message.role === "user" ? contentParts(text, images) : text;
+    if (message.role === "assistant") {
+      // Error placeholders are retryable UI state, not conversation context.
+      if (text.trimStart().startsWith("⚠")) continue;
+      const unstopped = withoutStoppedMarker(text);
+      // Empty-answer placeholders keep the bubble from looking broken locally.
+      if (EMPTY_ANSWER_MARKERS.has(unstopped.trim())) continue;
+      // Stored <think> blocks (imports/legacy) render clean but must send clean too.
+      const visible = splitThinking(unstopped).visible;
+      const empty = !String(visible ?? "").trim();
+      if (empty) continue;
+      out.push({ role: "assistant", content: visible });
+      continue;
+    }
+    const content = contentParts(text, images);
     const empty = typeof content === "string" ? !content.trim() : !content.length;
     if (empty) continue;
     out.push({ role: message.role, content });

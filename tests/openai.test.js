@@ -277,3 +277,61 @@ test("the model list and conversation titles are read from the API", async () =>
   assert.equal(titleFrom(""), "New chat");
   assert.equal(titleFrom("x".repeat(60)).length, 48);
 });
+
+test("UI-only assistant markers never reach the server", () => {
+  // Error placeholders stay retryable locally but are dropped from history.
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "⚠ The request failed. — fix Settings or press Retry." },
+      { role: "user", content: "are you there?" },
+    ],
+  }), [
+    { role: "user", content: "hi" },
+    { role: "user", content: "are you there?" },
+  ]);
+  // Stopped partials keep their visible text without the marker.
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "Partial answer\n\n_(stopped)_" },
+    ],
+  }), [
+    { role: "user", content: "hi" },
+    { role: "assistant", content: "Partial answer" },
+  ]);
+  // Abort before the first delta leaves nothing to send.
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "_(stopped)_" },
+    ],
+  }), [{ role: "user", content: "hi" }]);
+  // Empty-answer placeholders never reach the server.
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "_(the server returned an empty answer)_" },
+      { role: "user", content: "try again" },
+    ],
+  }), [
+    { role: "user", content: "hi" },
+    { role: "user", content: "try again" },
+  ]);
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "_(the server returned reasoning without a final answer)_" },
+    ],
+  }), [{ role: "user", content: "hi" }]);
+  // Stored think blocks send visible text only.
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "<think>draft plan</think>\nDone" },
+    ],
+  }), [
+    { role: "user", content: "hi" },
+    { role: "assistant", content: "Done" },
+  ]);
+});
