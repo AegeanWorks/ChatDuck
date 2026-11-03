@@ -497,3 +497,14 @@ test("whitespace-only api keys send no authorization header", () => {
   assert.deepEqual(requestHeaders("   "), { "content-type": "application/json" });
   assert.equal(requestHeaders("  k  ").authorization, "Bearer k");
 });
+
+test("non-numeric sampling params are omitted instead of null", async () => {
+  let seen = null;
+  const fetchImpl = async (_url, options) => {
+    seen = JSON.parse(options.body);
+    return streamResponse(["data: [DONE]\n\n"]);
+  };
+  await streamChat({ baseUrl: "http://127.0.0.1:4141", model: "m", messages: [{ role: "user", content: "hi" }], topP: "abc", seed: "abc", fetchImpl });
+  assert.ok(!("top_p" in seen));
+  assert.ok(!("seed" in seen));
+});

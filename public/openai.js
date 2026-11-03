@@ -323,10 +323,16 @@ export function normalizeUsage(usage) {
  */
 export async function streamChat({ baseUrl, apiKey = "", model, messages, temperature = 0.7, maxTokens = 1024, topP = null, frequencyPenalty = 0, presencePenalty = 0, seed = null, stream = true, signal, stallTimeoutMs = 90000, firstByteTimeoutMs = null, idleTimeoutMs = null, fetchImpl = fetch, onDelta = () => {}, onReasoning = () => {}, onUsage = () => {} }) {
   const payload = { model, messages, stream: stream !== false, temperature, max_tokens: maxTokens };
-  if (topP !== null && topP !== undefined && topP !== "") payload.top_p = Number(topP);
+  if (topP !== null && topP !== undefined && topP !== "") {
+    const parsedTopP = Number(topP);
+    if (Number.isFinite(parsedTopP)) payload.top_p = parsedTopP;
+  }
   if (Number(frequencyPenalty)) payload.frequency_penalty = Number(frequencyPenalty);
   if (Number(presencePenalty)) payload.presence_penalty = Number(presencePenalty);
-  if (seed !== null && seed !== undefined && seed !== "") payload.seed = Number(seed);
+  if (seed !== null && seed !== undefined && seed !== "") {
+    const parsedSeed = Number(seed);
+    if (Number.isFinite(parsedSeed)) payload.seed = parsedSeed;
+  }
   const firstMs = Number(firstByteTimeoutMs ?? stallTimeoutMs);
   const idleMs = Number(idleTimeoutMs ?? stallTimeoutMs);
   const validMs = (value) => Number.isFinite(value) && value > 0;
