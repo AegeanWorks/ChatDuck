@@ -455,7 +455,7 @@ export async function listModels({ baseUrl, apiKey = "", fetchImpl = fetch }) {
   const response = await fetchImpl(apiUrl(baseUrl, "/v1/models"), { headers: requestHeaders(apiKey) });
   if (!response.ok) throw new Error(await responseError(response));
   const body = await response.json();
-  return Array.isArray(body?.data) ? body.data.map((model) => String(model.id)).filter(Boolean) : [];
+  return Array.isArray(body?.data) ? body.data.map((model) => model?.id).filter((id) => typeof id === "string" && id.trim() !== "") : [];
 }
 
 /** A conversation title from the first user line. */

@@ -478,3 +478,11 @@ test("user abort still reports AbortError with timeouts enabled", async () => {
   assert.ok(error);
   assert.equal(error.name, "AbortError", "user Stop/Esc must stay _(stopped)_, not TimeoutError");
 });
+
+test("the model list drops entries without usable ids", async () => {
+  const models = await listModels({
+    baseUrl: "http://127.0.0.1:4141",
+    fetchImpl: async () => new Response(JSON.stringify({ data: [{ id: "a" }, {}, { id: "" }, { id: "  " }] }), { status: 200 }),
+  });
+  assert.deepEqual(models, ["a"]);
+});
