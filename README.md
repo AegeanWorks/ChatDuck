@@ -33,6 +33,7 @@ ChatDuck is served from `127.0.0.1:4173`, so the browser treats `127.0.0.1:4141`
 
 - Streams answers token by token, with **Stop** (or `Esc`), copyable messages and code blocks, and **Regenerate / Retry** for the latest answer. Failed requests show a one-click **Retry**. While a reply streams, you can scroll back through the chat and use **Jump to latest** to return.
 - **Edit & resend**: every user message has **Edit**, which replaces it, drops later replies, and replays from there. Every message has **Copy** and **Delete**.
+- **Composer drafts**: unsent text is saved per chat in this browser, survives reloads and chat switching, and clears on Send. Attached files still need re-attaching after a reload.
 - **Thinking traces**: `reasoning_content` deltas and `<think>` blocks (Qwen, DeepSeek-R1 style) render in a collapsible *Thinking* section, toggleable in Settings, so they never leak into the answer.
 - **Vision**: attach up to 4 images per message (📎 button, paste, or drag-and-drop) for vision-capable models; images are downscaled locally and sent as OpenAI content parts. Text-only servers keep receiving plain strings.
 - **Text files**: attach up to 3 code/text files per message — they are inlined as labeled fenced blocks (truncated at 12k chars with a note), so any server can read them with no special API.
@@ -53,7 +54,7 @@ ChatDuck is served from `127.0.0.1:4173`, so the browser treats `127.0.0.1:4141`
 
 ## Privacy and security
 
-ChatDuck has no backend and sends nothing anywhere except the server URL you enter. Conversations are stored in this browser only. The API key is session-scoped. Rendered model output is escaped first; links are limited to `http` and `https`. Clearing site data removes local chats and settings.
+ChatDuck has no backend and sends nothing anywhere except the server URL you enter. Conversations and unsent drafts are stored in this browser only. The API key is session-scoped. Rendered model output is escaped first; links are limited to `http` and `https`. Clearing site data removes local chats, drafts, and settings.
 
 ## 📦 What's Inside
 

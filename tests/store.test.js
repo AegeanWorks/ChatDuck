@@ -5,19 +5,24 @@ import {
   allConversationsToJSON,
   API_KEY,
   appendMessage,
+  clearDraft,
+  clearDrafts,
   contextUsage,
   conversationFromJSON,
   conversationsFromJSON,
   conversationToJSON,
   conversationToMarkdown,
   deleteMessageAt,
+  DRAFTS_KEY,
   duplicateConversation,
   editUserMessage,
   estimateConversationTokens,
+  getDraft,
   loadApiKey,
   loadConversations,
   loadSettings,
   MAX_CONVERSATIONS,
+  MAX_DRAFT_CHARS,
   newConversation,
   normalizeSettings,
   removeTrailingAssistant,
@@ -25,6 +30,7 @@ import {
   saveApiKey,
   saveConversations,
   saveSettings,
+  setDraft,
   sortConversations,
   togglePin,
 } from "../public/store.js";
@@ -225,4 +231,50 @@ test("a new conversation gets a title from its first user message", () => {
   assert.equal(conversation.title, "Fix the parser in this file.");
   assert.equal(conversation.updatedAt, 20);
   assert.equal(conversation.messages.length, 1);
+});
+
+test("composer drafts persist per chat and clear on send", () => {
+  const storage = fakeStorage();
+  assert.equal(getDraft(storage, "a"), "");
+  setDraft(storage, "a", "half-written thought");
+  setDraft(storage, "b", "other chat draft");
+  assert.equal(getDraft(storage, "a"), "half-written thought");
+  assert.equal(getDraft(storage, "b"), "other chat draft");
+  clearDraft(storage, "a");
+  assert.equal(getDraft(storage, "a"), "");
+  assert.equal(getDraft(storage, "b"), "other chat draft");
+  clearDrafts(storage);
+  assert.equal(getDraft(storage, "b"), "");
+  assert.equal(storage.getItem(DRAFTS_KEY), null);
+});
+
+test("whitespace-only drafts clear the entry and ids are required", () => {
+  const storage = fakeStorage();
+  setDraft(storage, "a", "something");
+  assert.equal(setDraft(storage, "a", "   \n  "), "");
+  assert.equal(storage.getItem(DRAFTS_KEY), JSON.stringify({}));
+  assert.equal(setDraft(storage, "", "kept?"), "");
+  assert.equal(getDraft(storage, null), "");
+  assert.equal(getDraft(storage, "missing"), "");
+  clearDraft(storage, "missing");
+  clearDraft(storage, null);
+});
+
+test("drafts are capped and survive corrupt or full storage", () => {
+  const storage = fakeStorage();
+  const long = `x${"y".repeat(MAX_DRAFT_CHARS + 100)}`;
+  assert.equal(setDraft(storage, "a", long).length, MAX_DRAFT_CHARS);
+  assert.equal(getDraft(storage, "a").length, MAX_DRAFT_CHARS);
+  storage.setItem(DRAFTS_KEY, "{not json");
+  assert.equal(getDraft(storage, "a"), "");
+  storage.setItem(DRAFTS_KEY, JSON.stringify(["not", "a", "map"]));
+  assert.equal(getDraft(storage, "a"), "");
+  const backing = fakeStorage();
+  const full = {
+    getItem: (key) => backing.getItem(key),
+    setItem: () => { throw new Error("QuotaExceededError"); },
+    removeItem: (key) => backing.removeItem(key),
+  };
+  assert.equal(setDraft(full, "a", "live value stays"), "live value stays");
+  assert.equal(getDraft(full, "a"), "");
 });

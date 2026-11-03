@@ -9,9 +9,12 @@ import {
   conversationsFromJSON,
   conversationToJSON,
   conversationToMarkdown,
+  clearDraft,
+  clearDrafts,
   deleteMessageAt,
   duplicateConversation,
   editUserMessage,
+  getDraft,
   loadApiKey,
   loadConversations,
   loadSettings,
@@ -23,6 +26,7 @@ import {
   saveApiKey,
   saveConversations,
   saveSettings,
+  setDraft,
   sortConversations,
   togglePin,
 } from "./store.js";
@@ -119,6 +123,16 @@ function persist() {
   // a reference to the assistant message while deltas arrive.
   state.conversations = sortConversations(state.conversations);
   saveConversations(browserStorage, state.conversations);
+}
+
+/** Show the active chat's unsent draft; the composer never renders HTML. */
+function restoreDraft() {
+  el.prompt.value = getDraft(browserStorage, state.activeId);
+  resizePrompt();
+}
+
+function saveDraft() {
+  setDraft(browserStorage, state.activeId, el.prompt.value);
 }
 
 const SYSTEM_PRESETS = Object.freeze([
@@ -625,6 +639,7 @@ function createChat() {
   state.editingIndex = null;
   persist();
   renderAll();
+  restoreDraft();
   closeSidebar();
   el.prompt.focus();
 }
@@ -635,6 +650,7 @@ function selectChat(id) {
   state.stickToBottom = true;
   state.editingIndex = null;
   renderAll();
+  restoreDraft();
   closeSidebar();
   el.prompt.focus();
 }
@@ -646,8 +662,10 @@ function deleteChat(id) {
   if (wasActive) state.activeId = state.conversations[0]?.id ?? null;
   if (wasActive) state.stickToBottom = true;
   state.editingIndex = null;
+  clearDraft(browserStorage, id);
   persist();
   renderAll();
+  restoreDraft();
 }
 
 function pinChat(id) {
@@ -777,6 +795,7 @@ async function send() {
     state.activeId = conversation.id;
   }
   el.prompt.value = "";
+  clearDraft(browserStorage, conversation.id);
   state.pendingImages = [];
   state.pendingTexts = [];
   renderAttachStrip();
@@ -864,6 +883,7 @@ function duplicateActiveChat() {
   state.editingIndex = null;
   persist();
   renderAll();
+  restoreDraft();
 }
 
 async function exportActiveChat(button) {
@@ -972,6 +992,7 @@ async function importChatFile(file) {
     state.editingIndex = null;
     persist();
     renderAll();
+    restoreDraft();
     setStatus(fresh.length > 1 ? `${fresh.length} chats imported.` : "Chat imported.", "ok");
   } catch (error) {
     setStatus(error?.message || "Could not import that file.", "warn");
@@ -1003,8 +1024,10 @@ function clearAllChats() {
   state.activeId = null;
   state.stickToBottom = true;
   state.editingIndex = null;
+  clearDrafts(browserStorage);
   persist();
   renderAll();
+  restoreDraft();
   el.dialog.close();
   setStatus("All chats deleted.", "warn");
 }
@@ -1093,7 +1116,10 @@ function bind() {
     event.preventDefault();
     void send();
   });
-  el.prompt.addEventListener("input", resizePrompt);
+  el.prompt.addEventListener("input", () => {
+    resizePrompt();
+    saveDraft();
+  });
   el.prompt.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
@@ -1273,6 +1299,7 @@ applyTheme();
 bind();
 if (state.conversations.length) state.activeId = state.conversations[0].id;
 renderAll();
+restoreDraft();
 renderCounter();
 void refreshModels({ quiet: true });
 el.prompt.focus();

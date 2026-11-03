@@ -9,7 +9,10 @@ import { titleFrom } from "./openai.js";
 export const SETTINGS_KEY = "chatduck.settings.v1";
 export const CONVERSATIONS_KEY = "chatduck.conversations.v1"; // aikit:allow-secret storage key, not a credential
 export const API_KEY = "chatduck.apiKey";
+export const DRAFTS_KEY = "chatduck.drafts.v1"; // aikit:allow-secret storage key, not a credential
 export const MAX_CONVERSATIONS = 200;
+/** Long pastes stay restorable without crowding out chats in localStorage. */
+export const MAX_DRAFT_CHARS = 20000;
 
 export const DEFAULT_SETTINGS = Object.freeze({
   baseUrl: "http://127.0.0.1:4141",
@@ -92,6 +95,75 @@ export function saveApiKey(session, key) {
   try {
     if (key) session?.setItem(API_KEY, String(key));
     else session?.removeItem(API_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function loadDrafts(storage) {
+  const parsed = parse(storage, DRAFTS_KEY, {});
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  const out = {};
+  for (const [id, draft] of Object.entries(parsed)) {
+    if (typeof id === "string" && typeof draft === "string") out[id] = draft;
+  }
+  return out;
+}
+
+/** Unsent composer text for one chat; corrupt storage reads as empty. */
+export function getDraft(storage, id) {
+  if (typeof id !== "string" || !id) return "";
+  try {
+    const draft = loadDrafts(storage)[id];
+    return typeof draft === "string" ? draft : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Persist unsent composer text for one chat. Whitespace-only input clears
+ * the entry; overlong drafts are sliced. A full store never breaks typing:
+ * the composer keeps its live value either way.
+ */
+export function setDraft(storage, id, draft) {
+  if (typeof id !== "string" || !id) return "";
+  const next = String(draft ?? "");
+  try {
+    const all = loadDrafts(storage);
+    if (!next.trim()) {
+      if (id in all) {
+        delete all[id];
+        storage?.setItem(DRAFTS_KEY, JSON.stringify(all));
+      }
+      return "";
+    }
+    all[id] = next.slice(0, MAX_DRAFT_CHARS);
+    storage?.setItem(DRAFTS_KEY, JSON.stringify(all));
+    return all[id];
+  } catch {
+    return next.slice(0, MAX_DRAFT_CHARS);
+  }
+}
+
+/** Forget one chat's unsent composer text. */
+export function clearDraft(storage, id) {
+  if (typeof id !== "string" || !id) return;
+  try {
+    const all = loadDrafts(storage);
+    if (id in all) {
+      delete all[id];
+      storage?.setItem(DRAFTS_KEY, JSON.stringify(all));
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+/** Forget every unsent composer draft. */
+export function clearDrafts(storage) {
+  try {
+    storage?.removeItem(DRAFTS_KEY);
   } catch {
     // Ignore storage failures.
   }

@@ -1,15 +1,14 @@
 {
   "version": 1,
   "active_task": {
-    "task_id": "audit-chatduck-waves",
-    "last_phase": "in_progress",
-    "active_phase": 5,
-    "status": "completed",
-    "updated_at": 1793722247.9419944,
+    "task_id": "chatduck-drafts",
+    "last_phase": "phase 4",
+    "active_phase": 4,
+    "status": "in_progress",
+    "updated_at": 1793724934.4379535,
     "owner": "kilo:1",
     "started_by": "kilo:1",
-    "continuations": [],
-    "completed_at": 1793722257.8972442
+    "continuations": []
   },
   "checkpoints": [
     {
@@ -223,6 +222,35 @@
       "status": "completed",
       "timestamp": 1793722257.8972456,
       "timestamp_str": "2026-11-03 19:10:57",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "chatduck-drafts",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "[1/1] per-chat composer drafts: localStorage-backed unsent text per chat id, synchronous save on input, restore on select/create/delete/import/clear-all/init, clear on Send; no wire, render, streaming, thinking or key changes",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793724926.936033,
+      "timestamp_str": "2026-11-03 19:55:26",
+      "agent": "kilo:1",
+      "impact_assessment": {
+        "why": "switching chats or reloading lost unsent composer text",
+        "benefits": "drafts survive reloads and chat switches with zero server impact",
+        "risks": "contract: new localStorage key and store API; dependency: none; concurrency: single composer, streaming guards block select/create/delete; state: drafts share localStorage quota",
+        "mitigation": "restore only at select/create/delete/import/clear-all/init call sites; 20k char cap; corrupt reads as empty; quota failure keeps live composer value; 3 new unit tests plus isolated-browser E2E"
+      },
+      "plan_digest": "c31d030c8c36a1d0b54cf938525cf1627f4a69cf20e255a22196dfd0d0f241d9"
+    },
+    {
+      "task_id": "chatduck-drafts",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "drafts implemented, tests 55/55, gates 4/4, isolated-browser E2E (per-chat isolation, reload restore, send clears) and screenshot compare clean; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793724934.4379535,
+      "timestamp_str": "2026-11-03 19:55:34",
       "agent": "kilo:1"
     }
   ]

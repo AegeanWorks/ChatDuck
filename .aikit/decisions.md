@@ -38,6 +38,13 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Decision**: Keep the tail plain text unless it both starts with `[`/`{` and contains an envelope key (`choices|delta|content|error|usage|message|id|object|model|created`). Truncated envelope fragments still return `""`; legit bracketed raw-text returns intact. Covered by `raw-text tails starting with brackets survive when the stream closes early`.
 - **Consequences**: Raw-text ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` answers that start with brackets are no longer lost on early close; truncated JSON still never leaks framing. A pathological raw-text answer containing an envelope key and starting with a bracket could still be dropped, which is the documented cost of the heuristic.
 
+### ADR-006: Per-chat composer drafts persist locally and clear on send
+- **Date**: 2026-11-03
+- **Status**: Accepted
+- **Context**: Switching chats or reloading the page lost unsent composer text, punishing anyone drafting across conversations. Drafts must never touch the wire, must survive per chat, and must not disturb streaming, thinking-trace handling, rendering, or the session-scoped key.
+- **Decision**: Store unsent composer text per chat id in `localStorage` under `chatduck.drafts.v1` (`getDraft`/`setDraft`/`clearDraft`/`clearDrafts` in `public/store.js`, sliced to 20000 chars, corrupt reads as empty, quota failure keeps the live composer value). `public/app.js` saves synchronously on composer input and restores after select/create/delete/import/clear-all/init — never inside `renderAll`, so Send's clear-then-`runTurn` ordering holds. Deleting a chat drops its draft; Clear all drops every draft; duplicates and imports start empty. Attachments are not draft-persisted.
+- **Consequences**: Typing survives reloads and chat switches identically on ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` and the dumbest text-only server, because drafts never leave the browser and never enter `buildMessages`. A reload loses pending file attachments (text restores, files need re-attaching), and typing with no chat at all is not saved until the first Send creates one.
+
 <!-- Entry format:
 ### ADR-NNN: <decision in one line>
 - **Date**: YYYY-MM-DD
