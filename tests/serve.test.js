@@ -55,3 +55,19 @@ test("the static server serves the app and refuses other methods", async (t) => 
   const post = await fetch(`${base}/`, { method: "POST" });
   assert.equal(post.status, 405);
 });
+
+test("error responses keep security headers and HEAD sends no body", async (t) => {
+  const server = createStaticServer({ root: PUBLIC });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const missing = await fetch(`${base}/nope.js`);
+  assert.equal(missing.status, 404);
+  assert.match(missing.headers.get("content-security-policy") ?? "", /default-src/);
+  assert.equal(missing.headers.get("x-content-type-options"), "nosniff");
+
+  const post = await fetch(`${base}/`, { method: "POST" });
+  assert.equal(post.status, 405);
+  assert.match(post.headers.get("content-security-policy") ?? "", /default-src/);
+});

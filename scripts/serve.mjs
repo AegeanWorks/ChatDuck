@@ -64,24 +64,25 @@ export function resolveStaticPath(root, urlPath) {
 
 export function createStaticServer({ root = PUBLIC_DIR } = {}) {
   return http.createServer(async (request, response) => {
+    const isHead = request.method === "HEAD";
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET, HEAD", "Content-Type": "text/plain; charset=utf-8" });
-      response.end("Method not allowed");
+      response.writeHead(405, { ...HEADERS, Allow: "GET, HEAD", "Content-Type": "text/plain; charset=utf-8", "Content-Length": 18 });
+      response.end(isHead ? undefined : "Method not allowed");
       return;
     }
     const pathname = (request.url ?? "/").split("?")[0];
     const file = resolveStaticPath(root, pathname);
     if (!file) {
-      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      response.end("Not found");
+      response.writeHead(404, { ...HEADERS, "Content-Type": "text/plain; charset=utf-8", "Content-Length": 9 });
+      response.end(isHead ? undefined : "Not found");
       return;
     }
     let body;
     try {
       body = await readFile(file);
     } catch {
-      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      response.end("Not found");
+      response.writeHead(404, { ...HEADERS, "Content-Type": "text/plain; charset=utf-8", "Content-Length": 9 });
+      response.end(isHead ? undefined : "Not found");
       return;
     }
     response.writeHead(200, {
