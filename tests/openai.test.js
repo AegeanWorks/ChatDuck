@@ -516,3 +516,47 @@ test("a padded DONE marker still terminates the stream", async () => {
   });
   assert.equal(text, "Hi");
 });
+
+test("model ids are trimmed before use", async () => {
+  const models = await listModels({
+    baseUrl: "http://127.0.0.1:4141",
+    fetchImpl: async () => new Response(JSON.stringify({ data: [{ id: "  qwen  " }, { id: "a" }] }), { status: 200 }),
+  });
+  assert.deepEqual(models, ["qwen", "a"]);
+});
+
+test("usage is delivered exactly once per answer", async () => {
+  let count = 0;
+  await streamChat({
+    baseUrl: "http://127.0.0.1:4141", model: "m", messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse([
+      'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
+      'data: {"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}\n\n',
+      "data: [DONE]\n\n",
+    ]),
+    onUsage: () => { count += 1; },
+  });
+  assert.equal(count, 1);
+});
+
+test("reasoning falls back to the message object when the delta lacks it", () => {
+  assert.equal(reasoningOf({ delta: { content: "hi" }, message: { reasoning_content: "plan" } }), "plan");
+});
+
+test("stacked stopped markers are fully stripped", () => {
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "Hi_(stopped)_\n\n_(stopped)_" },
+    ],
+  }), [
+    { role: "user", content: "hi" },
+    { role: "assistant", content: "Hi" },
+  ]);
+});
+
+test("titles never split a surrogate pair", () => {
+  const title = titleFrom("😀".repeat(60));
+  assert.equal(Array.from(title).length, 48);
+  assert.equal(title.isWellFormed(), true);
+});

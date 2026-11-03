@@ -67,3 +67,9 @@ test("NUL placeholder sequences never resolve to code spans", () => {
   assert.ok(!html.includes("undefined"));
   assert.ok(!html.includes("<code>"));
 });
+
+test("a fenced block closes only on a bare fence", () => {
+  const html = renderMarkdown("```\ncode\n```js\nmore");
+  assert.ok(!html.includes("<p>more</p>"), "```js must not close the fence");
+  assert.ok(html.includes("more"), "trailing text stays inside the fence");
+});

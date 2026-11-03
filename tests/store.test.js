@@ -279,3 +279,38 @@ test("drafts are capped and survive corrupt or full storage", () => {
   assert.equal(setDraft(full, "a", "live value stays"), "live value stays");
   assert.equal(getDraft(full, "a"), "");
 });
+
+test("duplicate rejects a missing conversation instead of throwing", () => {
+  assert.equal(duplicateConversation(null), false);
+  assert.equal(duplicateConversation(undefined), false);
+});
+
+test("duplicate deep-isolates usage and images", () => {
+  const conversation = newConversation({ id: "a", now: 1 });
+  appendMessage(conversation, "user", "hi", 2, ["data:image/png;base64,AAA"]);
+  conversation.messages[0].usage = { prompt: 1, completion: 1, total: 2 };
+  const copy = duplicateConversation(conversation, { now: 3, id: "b" });
+  copy.messages[0].usage.prompt = 999;
+  copy.messages[0].images.push("data:image/png;base64,BBB");
+  assert.equal(conversation.messages[0].usage.prompt, 1);
+  assert.equal(conversation.messages[0].images.length, 1);
+});
+
+test("delete and edit reject null or empty indexes", () => {
+  const conversation = newConversation({ id: "x", now: 1 });
+  appendMessage(conversation, "user", "a", 2);
+  assert.equal(deleteMessageAt(conversation, null, 3), false);
+  assert.equal(deleteMessageAt(conversation, "", 3), false);
+  assert.equal(conversation.messages.length, 1);
+  assert.equal(editUserMessage(conversation, "", "hacked", 3), false);
+  assert.equal(conversation.messages[0].content, "a");
+});
+
+test("an empty id generates a fresh id", () => {
+  assert.notEqual(newConversation({ id: "", now: 1 }).id, "");
+});
+
+test("rename reports success as a boolean", () => {
+  const conversation = newConversation({ id: "r", now: 1 });
+  assert.strictEqual(renameConversation(conversation, "Hi", 2), true);
+});

@@ -83,7 +83,7 @@ export function renderMarkdown(input) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     if (fence !== null) {
-      if (line.trim().startsWith("```")) {
+      if (/^```\s*$/.test(line.trim())) {
         const label = fenceLang.value ? `<span class="code-lang">${escapeHtml(fenceLang.value)}</span>` : "";
         out.push(`<pre>${label}<code>${escapeHtml(fence.join("\n"))}</code></pre>`);
         fence = null;

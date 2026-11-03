@@ -41,3 +41,8 @@ test("the scroll box is near the bottom only within the threshold", () => {
   assert.equal(isNearBottom({ scrollHeight: 1000, scrollTop: 500, clientHeight: 500 }, 0), true);
   assert.equal(isNearBottom({}, 80), true);
 });
+
+test("a null scroll state does not throw", () => {
+  assert.doesNotThrow(() => isNearBottom(null));
+  assert.doesNotThrow(() => isNearBottom(undefined));
+});

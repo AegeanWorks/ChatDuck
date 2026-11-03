@@ -60,3 +60,10 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Decision**: <what was decided>
 - **Consequences**: <what follows, including what it costs>
 -->
+
+### ADR-008: Swarm-verified hardening keeps callbacks and history predicates exact
+- **Date**: 2026-11-04
+- **Status**: Accepted
+- **Context**: Parallel analysis swarms (M1-M6) returned file+line+repro findings; sampling reproduced 12 true defects in pure modules: padded model ids, double `onUsage` per answer, missed `message.reasoning_content`, stacked `_(stopped)_` leak, surrogate-split titles, null scroll crash, null/empty index deletes, empty-id chats, shared refs on duplicate, fence closed by ```js.
+- **Decision**: Fix exactly the reproduced set with minimal diffs: trim model ids in `listModels`; deliver `onUsage` once (re-emit only when the loop never did) and drop the spurious empty reasoning delta; check `message.reasoning_content` in `reasoningOf`; strip stacked stopped markers in a loop; code-point-safe `titleFrom`; null-safe `isNearBottom`; strict index validation; `id || uuid` generation; deep-clone images/usage on duplicate; `duplicateConversation(null)` returns false; `renameConversation` returns boolean; fence closes only on bare ```. Each fix carries a new `node --test` case (62 to 74 tests).
+- **Consequences**: Wire and storage contracts tighten with no migration: existing chats load unchanged, callers passing `Number(index)` are unaffected, and duplicate branches are now safe to explore. Cost: `⚠`-prefixed legit answers, CSP inline-style alignment, and docs/legal gaps are filed-deferred, not fixed here.

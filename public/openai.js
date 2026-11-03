@@ -63,11 +63,20 @@ const EMPTY_ANSWER_MARKERS = new Set([
   "_(the server returned reasoning without a final answer)_",
 ]);
 
-/** Strip one trailing stopped marker, reversing runTurn's `_(stopped)_` suffix. */
+/** Strip trailing stopped markers, reversing runTurn's `_(stopped)_` suffix. */
 function withoutStoppedMarker(text) {
-  const body = String(text ?? "");
-  if (body.endsWith(`\n\n${STOPPED_SUFFIX}`)) return body.slice(0, -(`\n\n${STOPPED_SUFFIX}`.length));
-  if (body.endsWith(STOPPED_SUFFIX)) return body.slice(0, -STOPPED_SUFFIX.length);
+  let body = String(text ?? "");
+  let stripped = true;
+  while (stripped) {
+    stripped = false;
+    if (body.endsWith(`\n\n${STOPPED_SUFFIX}`)) {
+      body = body.slice(0, -(`\n\n${STOPPED_SUFFIX}`.length));
+      stripped = true;
+    } else if (body.endsWith(STOPPED_SUFFIX)) {
+      body = body.slice(0, -STOPPED_SUFFIX.length);
+      stripped = true;
+    }
+  }
   return body;
 }
 
@@ -164,9 +173,12 @@ export function splitThinking(content) {
 /** Extract a reasoning delta from providers that send it outside `content`. */
 export function reasoningOf(choice) {
   const delta = choice?.delta ?? choice?.message ?? {};
+  const message = choice?.message ?? {};
   const candidates = [
     delta?.reasoning_content,
     delta?.reasoning,
+    message?.reasoning_content,
+    message?.reasoning,
     choice?.reasoning_content,
     choice?.reasoning,
   ];
@@ -406,16 +418,22 @@ export async function streamChat({ baseUrl, apiKey = "", model, messages, temper
     let text = "";
     let reasoning = "";
     let usage = null;
+    let usageDelivered = false;
+    let reasoningDelivered = false;
     for await (const part of streamDeltas(response)) {
       if (combined.signal.aborted && timedOut) break;
       if (part.usage) {
         usage = normalizeUsage(part.usage);
-        if (usage) wrappedUsage(usage);
+        if (usage) {
+          wrappedUsage(usage);
+          usageDelivered = true;
+        }
         continue;
       }
       if (part.reasoning) {
         reasoning += part.reasoning;
         wrappedReasoning(part.reasoning, reasoning);
+        reasoningDelivered = true;
         continue;
       }
       if (typeof part.delta === "string" && part.delta) {
@@ -437,9 +455,11 @@ export async function streamChat({ baseUrl, apiKey = "", model, messages, temper
       }
     }
     // Keep the return value a plain string so existing callers and tests keep
-    // working; reasoning/usage flow through the callbacks and the last call.
-    if (reasoning) wrappedReasoning("", reasoning);
-    if (usage) wrappedUsage(usage);
+    // working; reasoning/usage flow through the callbacks above. Re-emit only
+    // when the loop never delivered them (e.g. <think> fallback), so each
+    // answer reports usage once and never sends a spurious empty reasoning delta.
+    if (reasoning && !reasoningDelivered) wrappedReasoning(reasoning, reasoning);
+    if (usage && !usageDelivered) wrappedUsage(usage);
     return text;
   } catch (error) {
     // Our timer is the only source of TimeoutError: normalize any abort it
@@ -467,13 +487,14 @@ export async function listModels({ baseUrl, apiKey = "", fetchImpl = fetch }) {
   const response = await fetchImpl(apiUrl(baseUrl, "/v1/models"), { headers: requestHeaders(apiKey) });
   if (!response.ok) throw new Error(await responseError(response));
   const body = await response.json();
-  return Array.isArray(body?.data) ? body.data.map((model) => model?.id).filter((id) => typeof id === "string" && id.trim() !== "") : [];
+  return Array.isArray(body?.data) ? body.data.map((model) => (typeof model?.id === "string" ? model.id.trim() : "")).filter((id) => id !== "") : [];
 }
 
 /** A conversation title from the first user line. */
 export function titleFrom(text, limit = 48) {
   const line = String(text ?? "").split("\n").map((item) => item.trim()).find(Boolean) ?? "New chat";
-  return line.length > limit ? `${line.slice(0, limit - 1)}…` : line;
+  if (line.length <= limit) return line;
+  return `${Array.from(line).slice(0, limit - 1).join("")}…`;
 }
 
 /** Ask the model for a short chat title (best-effort; callers keep the old title on failure). */

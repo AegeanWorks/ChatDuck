@@ -26,7 +26,8 @@ export function editReplayFrom(messages, index) {
 }
 
 /** True when the scroll box is within `threshold` pixels of the latest message. */
-export function isNearBottom({ scrollHeight = 0, scrollTop = 0, clientHeight = 0 } = {}, threshold = 80) {
+export function isNearBottom(state = {}, threshold = 80) {
+  const { scrollHeight = 0, scrollTop = 0, clientHeight = 0 } = state ?? {};
   return scrollHeight - scrollTop - clientHeight <= threshold;
 }
 

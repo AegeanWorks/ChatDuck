@@ -256,7 +256,7 @@ let sequence = 0;
 
 export function newConversation({ now = Date.now(), id = null } = {}) {
   sequence += 1;
-  const unique = id ?? globalThis.crypto?.randomUUID?.() ?? `${now}-${sequence}`;
+  const unique = id || globalThis.crypto?.randomUUID?.() || `${now}-${sequence}`;
   return { id: unique, title: "New chat", createdAt: now, updatedAt: now, messages: [] };
 }
 
@@ -296,26 +296,40 @@ export function renameConversation(conversation, title, now = Date.now()) {
   const next = String(title ?? "").trim().slice(0, 120);
   conversation.title = next || "New chat";
   conversation.updatedAt = now;
-  return conversation;
+  return true;
 }
 
 /** Duplicate a conversation so a branch can be explored safely. */
 export function duplicateConversation(conversation, { now = Date.now(), id = null } = {}) {
-  const unique = id ?? globalThis.crypto?.randomUUID?.() ?? `${now}-${Math.floor(Math.random() * 1e9)}`;
+  if (!conversation) return false;
+  const unique = id || globalThis.crypto?.randomUUID?.() || `${now}-${Math.floor(Math.random() * 1e9)}`;
   return {
     id: unique,
     title: `${conversation.title} (copy)`.slice(0, 120),
     createdAt: now,
     updatedAt: now,
-    messages: (conversation.messages ?? []).map((message) => ({ ...message })),
+    messages: (conversation.messages ?? []).map((message) => ({
+      ...message,
+      ...(Array.isArray(message?.images) ? { images: [...message.images] } : {}),
+      ...(message?.usage && typeof message.usage === "object" ? { usage: { ...message.usage } } : {}),
+    })),
   };
+}
+
+/** A message index is valid only when it addresses an existing turn. */
+function toMessageIndex(index, length) {
+  if (typeof index !== "number" && typeof index !== "string") return -1;
+  if (typeof index === "string" && index.trim() === "") return -1;
+  const at = Number(index);
+  if (!Number.isInteger(at) || at < 0 || at >= length) return -1;
+  return at;
 }
 
 /** Remove one message; used for per-message delete buttons. */
 export function deleteMessageAt(conversation, index, now = Date.now()) {
-  const at = Number(index);
   if (!conversation || !Array.isArray(conversation.messages)) return false;
-  if (!Number.isInteger(at) || at < 0 || at >= conversation.messages.length) return false;
+  const at = toMessageIndex(index, conversation.messages.length);
+  if (at < 0) return false;
   conversation.messages.splice(at, 1);
   conversation.updatedAt = now;
   return true;
@@ -326,10 +340,10 @@ export function deleteMessageAt(conversation, index, now = Date.now()) {
  * replays from that point like modern chat UIs.
  */
 export function editUserMessage(conversation, index, content, now = Date.now()) {
-  const at = Number(index);
   const next = String(content ?? "").trim();
   if (!conversation || !Array.isArray(conversation.messages)) return false;
-  if (!Number.isInteger(at) || at < 0 || at >= conversation.messages.length) return false;
+  const at = toMessageIndex(index, conversation.messages.length);
+  if (at < 0) return false;
   if (conversation.messages[at]?.role !== "user" || !next) return false;
   const edited = { role: "user", content: next, ts: now };
   // Keep vision attachments: the text is re-sent with the same images.
