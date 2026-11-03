@@ -19,7 +19,7 @@ function inline(escaped) {
     .replace(/~~([^~]+)~~/g, "<del>$1</del>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,])/g, "$1<em>$2</em>");
-  return text.replace(/\u0000(\d+)\u0000/g, (_match, index) => `<code>${codes[Number(index)]}</code>`);
+  return text.replace(/\u0000(\d+)\u0000/g, (match, index) => (index in codes ? `<code>${codes[Number(index)]}</code>` : match));
 }
 
 function isTableDivider(line) {

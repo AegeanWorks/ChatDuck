@@ -60,3 +60,10 @@ test("think blocks are extracted and never rendered inline", () => {
   assert.ok(!html.includes("secret plan"));
   assert.ok(html.includes("Visible"));
 });
+
+test("NUL placeholder sequences never resolve to code spans", () => {
+  const nul = String.fromCharCode(0);
+  const html = renderMarkdown(`${nul}0${nul}`);
+  assert.ok(!html.includes("undefined"));
+  assert.ok(!html.includes("<code>"));
+});
