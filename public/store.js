@@ -292,6 +292,7 @@ export function togglePin(conversation, now = Date.now()) {
 
 /** Rename a conversation (inline pencil in the header). */
 export function renameConversation(conversation, title, now = Date.now()) {
+  if (!conversation) return false;
   const next = String(title ?? "").trim().slice(0, 120);
   conversation.title = next || "New chat";
   conversation.updatedAt = now;

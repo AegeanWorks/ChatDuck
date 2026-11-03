@@ -141,6 +141,7 @@ test("edit, delete, rename, duplicate and export manage history", () => {
   assert.ok(estimateConversationTokens(conversation) >= 1);
   assert.equal(editUserMessage(conversation, 5, "nope"), false);
   assert.equal(deleteMessageAt(conversation, 5), false);
+  assert.equal(renameConversation(null, "x"), false);
 });
 
 test("images attach to user turns and survive a JSON round trip", () => {
