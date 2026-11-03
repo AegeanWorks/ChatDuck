@@ -27,9 +27,10 @@ export function apiUrl(baseUrl, pathname) {
 }
 
 export function requestHeaders(apiKey) {
+  const key = typeof apiKey === "string" ? apiKey.trim() : "";
   return {
     "content-type": "application/json",
-    ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+    ...(key ? { authorization: `Bearer ${key}` } : {}),
   };
 }
 

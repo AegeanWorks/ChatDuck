@@ -15,6 +15,7 @@ import {
   normalizeUsage,
   parseSseChunk,
   reasoningOf,
+  requestHeaders,
   splitThinking,
   streamChat,
   suggestTitle,
@@ -490,4 +491,9 @@ test("the model list drops entries without usable ids", async () => {
 test("usage null and empty strings stay null instead of 0", () => {
   assert.deepEqual(normalizeUsage({ prompt_tokens: null, completion_tokens: 5 }), { prompt: null, completion: 5, total: null });
   assert.equal(normalizeUsage({ prompt_tokens: "", completion_tokens: "", total_tokens: "" }), null);
+});
+
+test("whitespace-only api keys send no authorization header", () => {
+  assert.deepEqual(requestHeaders("   "), { "content-type": "application/json" });
+  assert.equal(requestHeaders("  k  ").authorization, "Bearer k");
 });
