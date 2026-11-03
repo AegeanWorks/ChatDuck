@@ -1240,13 +1240,19 @@ function bind() {
   el.attachStrip.addEventListener("click", (event) => {
     const removeImage = event.target.closest("[data-remove-attach]");
     if (removeImage) {
-      state.pendingImages.splice(Number(removeImage.dataset.removeAttach), 1);
+      const imageIndex = Number(removeImage.dataset.removeAttach);
+      if (Number.isInteger(imageIndex) && imageIndex >= 0 && imageIndex < state.pendingImages.length) {
+        state.pendingImages.splice(imageIndex, 1);
+      }
       renderAttachStrip();
       return;
     }
     const removeText = event.target.closest("[data-remove-text]");
     if (!removeText) return;
-    state.pendingTexts.splice(Number(removeText.dataset.removeText), 1);
+    const textIndex = Number(removeText.dataset.removeText);
+    if (Number.isInteger(textIndex) && textIndex >= 0 && textIndex < state.pendingTexts.length) {
+      state.pendingTexts.splice(textIndex, 1);
+    }
     renderAttachStrip();
   });
   el.composer.addEventListener("paste", (event) => {
