@@ -486,3 +486,8 @@ test("the model list drops entries without usable ids", async () => {
   });
   assert.deepEqual(models, ["a"]);
 });
+
+test("usage null and empty strings stay null instead of 0", () => {
+  assert.deepEqual(normalizeUsage({ prompt_tokens: null, completion_tokens: 5 }), { prompt: null, completion: 5, total: null });
+  assert.equal(normalizeUsage({ prompt_tokens: "", completion_tokens: "", total_tokens: "" }), null);
+});

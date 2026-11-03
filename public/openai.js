@@ -291,7 +291,12 @@ async function* streamDeltas(response) {
 
 /** Normalize a server `usage` block to finite token counts (or nulls). */
 export function normalizeUsage(usage) {
-  const number = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
+  const number = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string" && value.trim() === "") return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
   if (!usage || typeof usage !== "object") return null;
   const prompt = number(usage.prompt_tokens);
   const completion = number(usage.completion_tokens);
