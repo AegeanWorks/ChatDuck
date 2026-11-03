@@ -45,6 +45,13 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Decision**: Store unsent composer text per chat id in `localStorage` under `chatduck.drafts.v1` (`getDraft`/`setDraft`/`clearDraft`/`clearDrafts` in `public/store.js`, sliced to 20000 chars, corrupt reads as empty, quota failure keeps the live composer value). `public/app.js` saves synchronously on composer input and restores after select/create/delete/import/clear-all/init — never inside `renderAll`, so Send's clear-then-`runTurn` ordering holds. Deleting a chat drops its draft; Clear all drops every draft; duplicates and imports start empty. Attachments are not draft-persisted.
 - **Consequences**: Typing survives reloads and chat switches identically on ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` and the dumbest text-only server, because drafts never leave the browser and never enter `buildMessages`. A reload loses pending file attachments (text restores, files need re-attaching), and typing with no chat at all is not saved until the first Send creates one.
 
+### ADR-007: The settled turn always paints settled; stale streaming frames never win
+- **Date**: 2026-11-03
+- **Status**: Accepted
+- **Context**: A `requestAnimationFrame` queued by the last stream delta could fire after `runTurn.finally`'s `renderAll`, repainting the finished reply streaming-style (thinking forced open, no stats line) until some later render repaired it. The stored message was always correct; only the paint was stale.
+- **Decision**: `runTurn.finally` cancels any pending `state.frame` before persist/`renderAll` (deterministic: the synchronous finally block always runs before the next paint), and `updateStreamingMessage` falls back to the full `renderMessages` pass whenever `state.streaming` is null. No API, wire, extraction, rendering, storage, or key-scope changes; no new predicates or tests, because the decision is a one-line branch on live DOM state that node tests cannot execute — the mock-SSE browser protocol is the regression proof.
+- **Consequences**: Every completed, stopped, or failed turn settles immediately on ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` and the dumbest text-only server. A future slip that somehow queues a frame after settle degrades to one redundant full render, never to a wrong paint.
+
 <!-- Entry format:
 ### ADR-NNN: <decision in one line>
 - **Date**: YYYY-MM-DD

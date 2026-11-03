@@ -587,6 +587,12 @@ function renderAll() {
 }
 
 function updateStreamingMessage() {
+  // A frame queued just before the turn ended must never repaint
+  // streaming-style over the final render; fall back to the full pass.
+  if (!state.streaming) {
+    renderMessages();
+    return;
+  }
   const conversation = active();
   if (!conversation || !conversation.messages.length) {
     renderMessages();
@@ -745,6 +751,12 @@ async function runTurn(conversation, userText = null, images = []) {
     assistant.tokensPerSecond = elapsedMs > 0 ? tokens / (elapsedMs / 1000) : 0;
     state.streaming = null;
     setBusy(false);
+    // Drop a paint queued just before the turn ended: the final renderAll
+    // below already paints the settled state, and the frame would run after it.
+    if (state.frame) {
+      cancelAnimationFrame(state.frame);
+      state.frame = 0;
+    }
     conversation.updatedAt = Date.now();
     persist();
     renderAll();

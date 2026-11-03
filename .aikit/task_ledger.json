@@ -1,54 +1,16 @@
 {
   "version": 1,
   "active_task": {
-    "task_id": "chatduck-drafts",
+    "task_id": "chatduck-frame",
     "last_phase": "phase 4",
     "active_phase": 4,
     "status": "in_progress",
-    "updated_at": 1793724934.4379535,
+    "updated_at": 1793726907.9773855,
     "owner": "kilo:1",
     "started_by": "kilo:1",
     "continuations": []
   },
   "checkpoints": [
-    {
-      "task_id": "build-chat-ui",
-      "phase": "phase 2",
-      "phase_num": 2,
-      "description": "[1/1] a dependency-free static OpenAI-compatible chat client: streaming SSE, escaping-first Markdown, code copy, browser-local chats, settings, and a loopback static server; verified with 19 tests and a headless end-to-end stream against a mock server",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793488534.7506807,
-      "timestamp_str": "2026-11-01 02:15:34",
-      "agent": "commandcode:1",
-      "impact_assessment": {
-        "why": "The chat UI is split out of ModelDuck so the model server and tuner stay focused, and the same client can target any OpenAI-compatible server",
-        "benefits": "A fast, inspectable chat front end with no build, no backend and no telemetry; ModelDuck becomes a server and coding tuner",
-        "risks": "contract: a new public app and UI contract; dependency: none; concurrency: none; state: chats in localStorage and the API key in sessionStorage",
-        "mitigation": "Unit tests for the client, storage, Markdown and static server, plus a real headless stream smoke; escaping-first rendering and a loopback-only path guard"
-      }
-    },
-    {
-      "task_id": "build-chat-ui",
-      "phase": "phase 4",
-      "phase_num": 4,
-      "description": "chat client, tests and static server in; headless Edge streamed a mock answer end to end; tests pass, gate 4/4; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793488539.9799218,
-      "timestamp_str": "2026-11-01 02:15:39",
-      "agent": "commandcode:1"
-    },
-    {
-      "task_id": "build-chat-ui",
-      "phase": "completed",
-      "phase_num": 5,
-      "description": "Task 'build-chat-ui' completed successfully.",
-      "status": "completed",
-      "timestamp": 1793488552.0265903,
-      "timestamp_str": "2026-11-01 02:15:52",
-      "agent": "commandcode:1"
-    },
     {
       "task_id": "harden-chatduck",
       "phase": "phase 2",
@@ -251,6 +213,56 @@
       "status": "in_progress",
       "timestamp": 1793724934.4379535,
       "timestamp_str": "2026-11-03 19:55:34",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "chatduck-drafts",
+      "phase": "phase 5",
+      "phase_num": 5,
+      "description": "Task 'chatduck-drafts' completed successfully: per-chat drafts shipped, gates green, E2E + privacy verified, one pre-existing finding filed back (stale rAF paint)",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793725464.9026785,
+      "timestamp_str": "2026-11-03 20:04:24",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "chatduck-frame",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "[1/1] settle stale streaming frame: cancel pending rAF in runTurn.finally plus idle guard in updateStreamingMessage; no API, wire, render, storage, or key changes",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793726843.7223322,
+      "timestamp_str": "2026-11-03 20:27:23",
+      "agent": "kilo:1",
+      "impact_assessment": {
+        "why": "a queued paint can fire after the final render, leaving thinking open and stats hidden until the next render",
+        "benefits": "every completed turn settles into final paint immediately with no interaction",
+        "risks": "contract: none, same DOM functions; dependency: none; concurrency: single stream handle trusted by existing guards; state: none, no stored data",
+        "mitigation": "cancel is deterministic via microtask-before-paint ordering; guard falls back to full renderMessages; E2E over mock SSE proves 5 consecutive settles incl stop and error"
+      },
+      "plan_digest": "80d5b1a8456bf08cd5e077bc08ab9e55a28a83b4ba7bb4eba26667220615ccdd"
+    },
+    {
+      "task_id": "chatduck-drafts",
+      "phase": "superseded",
+      "phase_num": 5,
+      "description": "Superseded by 'chatduck-frame' without --complete or --reset",
+      "status": "superseded",
+      "timestamp": 1793726843.7223322,
+      "timestamp_str": "2026-11-03 20:27:23",
+      "agent": "kilo:1"
+    },
+    {
+      "task_id": "chatduck-frame",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "frame settle shipped: tests 55/55, gates 4/4, isolated-browser E2E 5/5 settles (3 stream, stop, error) with closed thinking plus stats and no rescue render; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793726907.9773855,
+      "timestamp_str": "2026-11-03 20:28:27",
       "agent": "kilo:1"
     }
   ]
