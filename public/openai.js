@@ -234,7 +234,7 @@ async function* streamDeltas(response) {
     const parsed = parseSseChunk(buffer);
     buffer = parsed.rest;
     for (const data of parsed.events) {
-      if (data === "[DONE]") return;
+      if (data.trim() === "[DONE]") return;
       let event;
       try {
         event = JSON.parse(data);

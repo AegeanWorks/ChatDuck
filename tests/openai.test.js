@@ -508,3 +508,11 @@ test("non-numeric sampling params are omitted instead of null", async () => {
   assert.ok(!("top_p" in seen));
   assert.ok(!("seed" in seen));
 });
+
+test("a padded DONE marker still terminates the stream", async () => {
+  const text = await streamChat({
+    baseUrl: "http://127.0.0.1:4141", model: "m", messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(['data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n', "data: [DONE] \n\n"]),
+  });
+  assert.equal(text, "Hi");
+});
