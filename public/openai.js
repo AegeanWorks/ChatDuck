@@ -272,14 +272,18 @@ async function* streamDeltas(response) {
         if (typeof delta === "string" && delta) yield { delta };
       } catch {
         // Plain-text tail: strip SSE framing, but drop fragments that look
-        // like truncated JSON instead of leaking protocol syntax.
+        // like truncated envelope JSON instead of leaking protocol syntax.
+        // Legit raw-text starting with [ or { (for example [hello]) is kept;
+        // only bracketed tails containing envelope keys are dropped.
         const plain = tail
           .split("\n")
           .map((line) => line.replace(/^data:\s?/, "").trim())
           .filter((line) => line && line !== "[DONE]")
           .join("\n")
           .trim();
-        if (plain && !/^[[{]/.test(plain)) yield { delta: plain };
+        const truncatedEnvelope = /^[[{]/.test(plain)
+          && /"(choices|delta|content|error|usage|message|id|object|model|created)/.test(plain);
+        if (plain && !truncatedEnvelope) yield { delta: plain };
       }
     }
   }

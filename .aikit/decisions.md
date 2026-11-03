@@ -31,6 +31,13 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Decision**: Capture `npm start` at `http://127.0.0.1:4173` with no model server running: `2026-11-03-chat.png` (empty library, suggestion cards, composer, Offline status) and `2026-11-03-settings.png` (server URL/key/model/preset/prompt/sampling/library after opening Settings). Record commit `f2c1c0b`, date and viewport 1440x900 in `.aikit/media.json` and the README `aegean:screenshots` block.
 - **Consequences**: README proves the real first-run path including the documented ModelDuck connection flow; no reply is shown because none could honestly exist. Reproduce with: `npm start`, open the URL, screenshot, click Settings, screenshot.
 
+### ADR-005: Bracketed raw-text tails survive; only envelope fragments are dropped
+- **Date**: 2026-11-03
+- **Status**: Accepted
+- **Context**: Wave audit of 13 commits found `streamDeltas` tail code dropped any tail starting with `[` or `{` (`if (plain && !/^[[{]/)`), so a server closing without `[DONE]` lost legit answers like `[hello]` or `{hello}` while truncated `{"choices"...` was correctly dropped.
+- **Decision**: Keep the tail plain text unless it both starts with `[`/`{` and contains an envelope key (`choices|delta|content|error|usage|message|id|object|model|created`). Truncated envelope fragments still return `""`; legit bracketed raw-text returns intact. Covered by `raw-text tails starting with brackets survive when the stream closes early`.
+- **Consequences**: Raw-text ModelDuck/Ollama/LM Studio/plain `/v1/chat/completions` answers that start with brackets are no longer lost on early close; truncated JSON still never leaks framing. A pathological raw-text answer containing an envelope key and starting with a bracket could still be dropped, which is the documented cost of the heuristic.
+
 <!-- Entry format:
 ### ADR-NNN: <decision in one line>
 - **Date**: YYYY-MM-DD

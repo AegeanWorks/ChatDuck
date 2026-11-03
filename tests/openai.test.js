@@ -267,6 +267,23 @@ test("raw-text SSE streams through and truncated JSON never leaks framing", asyn
   assert.equal(noDone, "Late");
 });
 
+test("raw-text tails starting with brackets survive when the stream closes early", async () => {
+  const bracket = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "modelduck",
+    messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(["data: [hello]"]),
+  });
+  assert.equal(bracket, "[hello]");
+  const brace = await streamChat({
+    baseUrl: "http://127.0.0.1:4141",
+    model: "modelduck",
+    messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(["data: {hello}"]),
+  });
+  assert.equal(brace, "{hello}");
+});
+
 test("the model list and conversation titles are read from the API", async () => {
   const models = await listModels({
     baseUrl: "http://127.0.0.1:4141",
