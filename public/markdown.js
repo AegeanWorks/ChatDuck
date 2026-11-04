@@ -31,9 +31,9 @@ function renderTable(headerLine, rows) {
   const split = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
   const headers = split(headerLine);
   const aligns = split(rows[0]).map((cell) => {
-    if (/^:.*:$/.test(cell)) return ' style="text-align:center"';
-    if (/.*:$/.test(cell)) return ' style="text-align:right"';
-    if (/^:/.test(cell)) return ' style="text-align:left"';
+    if (/^:.*:$/.test(cell)) return ' data-align="center"';
+    if (/.*:$/.test(cell)) return ' data-align="right"';
+    if (/^:/.test(cell)) return ' data-align="left"';
     return "";
   });
   const head = `<tr>${headers.map((cell, index) => `<th${aligns[index] ?? ""}>${inline(escapeHtml(cell)) || ""}</th>`).join("")}</tr>`;

@@ -61,9 +61,15 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Consequences**: <what follows, including what it costs>
 -->
 
-### ADR-008: Swarm-verified hardening keeps callbacks and history predicates exact
-- **Date**: 2026-11-04
+### ADR-008: Swarm-verified hardening keeps callbacks and history predicates exact- **Date**: 2026-11-04
 - **Status**: Accepted
 - **Context**: Parallel analysis swarms (M1-M6) returned file+line+repro findings; sampling reproduced 12 true defects in pure modules: padded model ids, double `onUsage` per answer, missed `message.reasoning_content`, stacked `_(stopped)_` leak, surrogate-split titles, null scroll crash, null/empty index deletes, empty-id chats, shared refs on duplicate, fence closed by ```js.
 - **Decision**: Fix exactly the reproduced set with minimal diffs: trim model ids in `listModels`; deliver `onUsage` once (re-emit only when the loop never did) and drop the spurious empty reasoning delta; check `message.reasoning_content` in `reasoningOf`; strip stacked stopped markers in a loop; code-point-safe `titleFrom`; null-safe `isNearBottom`; strict index validation; `id || uuid` generation; deep-clone images/usage on duplicate; `duplicateConversation(null)` returns false; `renameConversation` returns boolean; fence closes only on bare ```. Each fix carries a new `node --test` case (62 to 74 tests).
 - **Consequences**: Wire and storage contracts tighten with no migration: existing chats load unchanged, callers passing `Number(index)` are unaffected, and duplicate branches are now safe to explore. Cost: `⚠`-prefixed legit answers, CSP inline-style alignment, and docs/legal gaps are filed-deferred, not fixed here.
+
+### ADR-009: Deferred swarm gaps closed without widening trust
+- **Date**: 2026-11-04
+- **Status**: Accepted
+- **Context**: ADR-008 deferred four verified gaps: table alignment broken by the shipped `style-src 'self'` CSP, legit `⚠`-leading answers culled from wire history, silent `PORT` fallback and raw-stack crashes, and store pure-function gaps (`conversationToJSON(null)` → `"null"`, empty backup unrestorable, token meter counting `"undefined"`).
+- **Decision**: Render table alignment with `data-align` attributes plus stylesheet rules (CSP unchanged); drop only assistant turns matching the app's own `⚠ … — fix Settings or press Retry.` error template; parse `PORT` via exported `resolvePort` (unset/blank/0 → 4173, else integer 1-65535, otherwise stderr Why/Fix plus exit 2); `conversationToJSON` throws on invalid input, `conversationsFromJSON` round-trips empty backups with an import-time "Nothing to import." guard, and the token estimate coerces missing fields to empty. Six new `node --test` cases (74 to 80 green).
+- **Consequences**: Alignment paints under the shipped CSP with no `unsafe-inline`; legit answers survive on the wire while placeholders stay local; bad ports fail fast with a fix hint; empty backups import cleanly and garbage files still error. Cost: UI `Retry`/`Regenerate` labels and `canRegenerate` still key on the broad `⚠` prefix (cosmetic), and docs/legal wording stays untouched.

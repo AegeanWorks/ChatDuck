@@ -992,6 +992,10 @@ async function importChatFile(file) {
       imported = [conversationFromJSON(raw)];
     }
     const fresh = [];
+    if (!imported.length) {
+      setStatus("Nothing to import.", "warn");
+      return;
+    }
     for (const conversation of imported) {
       if (state.conversations.some((existing) => existing.id === conversation.id)) {
         conversation.id = globalThis.crypto?.randomUUID?.() ?? `import-${Date.now()}-${fresh.length}`;

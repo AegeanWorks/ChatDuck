@@ -96,8 +96,29 @@ export function createStaticServer({ root = PUBLIC_DIR } = {}) {
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+/** The loopback port from `env.PORT`, or the default when unset, blank or 0. */
+export function resolvePort(env = process.env) {
+  const raw = env?.PORT;
+  if (raw === undefined || raw === null || String(raw).trim() === "") return DEFAULT_PORT;
+  const port = Number(raw);
+  if (port === 0) return DEFAULT_PORT;
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(
+      `Invalid PORT ${JSON.stringify(String(raw))}. Why: ChatDuck serves 127.0.0.1 on ports 1-65535. Fix: set PORT to a free port, e.g. PORT=4173, or unset it for the default ${DEFAULT_PORT}.`,
+    );
+  }
+  return port;
+}
+
 if (isMain) {
-  const port = Number(process.env.PORT) || DEFAULT_PORT;
+  let port;
+  try {
+    port = resolvePort();
+  } catch (error) {
+    process.stderr.write(`[chatduck] ${error.message}\n`);
+    process.exit(2);
+  }
   const open = process.argv.includes("--open");
   const server = createStaticServer();
   server.on("error", (error) => {

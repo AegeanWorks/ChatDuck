@@ -560,3 +560,21 @@ test("titles never split a surrogate pair", () => {
   assert.equal(Array.from(title).length, 48);
   assert.equal(title.isWellFormed(), true);
 });
+
+test("a legit warn-leading answer still reaches the server", () => {
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "⚠ Important: back up first" },
+    ],
+  }), [
+    { role: "user", content: "hi" },
+    { role: "assistant", content: "⚠ Important: back up first" },
+  ]);
+  assert.deepEqual(buildMessages({
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "⚠ The request failed. — fix Settings or press Retry." },
+    ],
+  }), [{ role: "user", content: "hi" }]);
+});

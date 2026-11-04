@@ -73,3 +73,10 @@ test("a fenced block closes only on a bare fence", () => {
   assert.ok(!html.includes("<p>more</p>"), "```js must not close the fence");
   assert.ok(html.includes("more"), "trailing text stays inside the fence");
 });
+
+test("table alignment uses CSP-safe attributes, never inline styles", () => {
+  const html = renderMarkdown("| a | b |\n| :---: | ---: |\n| 1 | 2 |");
+  assert.ok(html.includes('data-align="center"'), "center alignment survives");
+  assert.ok(html.includes('data-align="right"'), "right alignment survives");
+  assert.ok(!html.includes("style="), "no inline style for the shipped style-src 'self' CSP");
+});

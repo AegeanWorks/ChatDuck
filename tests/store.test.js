@@ -195,7 +195,7 @@ test("timestamps, context meter and backup round trips work", () => {
   const restored = conversationsFromJSON(backup);
   assert.equal(restored.length, 1);
   assert.equal(restored[0].messages[0].ts, 200);
-  assert.throws(() => conversationsFromJSON("[]"), /not a ChatDuck/);
+  assert.throws(() => conversationsFromJSON('"garbage"'), /not a ChatDuck/);
 });
 
 test("pins sort first, seeds clamp and usage survives", () => {
@@ -313,4 +313,21 @@ test("an empty id generates a fresh id", () => {
 test("rename reports success as a boolean", () => {
   const conversation = newConversation({ id: "r", now: 1 });
   assert.strictEqual(renameConversation(conversation, "Hi", 2), true);
+});
+
+test("single-chat JSON fails fast on invalid input", () => {
+  assert.throws(() => conversationToJSON(null), /not a ChatDuck conversation/);
+  assert.throws(() => conversationToJSON({ nope: true }), /not a ChatDuck conversation/);
+});
+
+test("an empty backup round-trips to an empty library", () => {
+  assert.deepEqual(conversationsFromJSON(allConversationsToJSON([])), []);
+  assert.deepEqual(conversationsFromJSON("[]"), []);
+});
+
+test("the token estimate ignores missing fields", () => {
+  assert.equal(
+    estimateConversationTokens({ messages: [{ role: "user" }] }),
+    estimateConversationTokens({ messages: [{ role: "user", content: "" }] }),
+  );
 });

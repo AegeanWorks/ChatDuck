@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { browserOpenCommand, createStaticServer, resolveStaticPath } from "../scripts/serve.mjs";
+import { browserOpenCommand, createStaticServer, resolvePort, resolveStaticPath } from "../scripts/serve.mjs";
 
 const PUBLIC = fileURLToPath(new URL("../public", import.meta.url));
 
@@ -70,4 +70,15 @@ test("error responses keep security headers and HEAD sends no body", async (t) =
   const post = await fetch(`${base}/`, { method: "POST" });
   assert.equal(post.status, 405);
   assert.match(post.headers.get("content-security-policy") ?? "", /default-src/);
+});
+
+test("PORT resolves the default or a valid port and rejects the rest", () => {
+  assert.equal(resolvePort({}), 4173);
+  assert.equal(resolvePort({ PORT: "" }), 4173);
+  assert.equal(resolvePort({ PORT: "0" }), 4173);
+  assert.equal(resolvePort({ PORT: "5000" }), 5000);
+  assert.equal(resolvePort({ PORT: 4173 }), 4173);
+  for (const bad of ["abc", "-1", "4173.5", "99999", "0x100000"]) {
+    assert.throws(() => resolvePort({ PORT: bad }), /Invalid PORT/, String(bad));
+  }
 });

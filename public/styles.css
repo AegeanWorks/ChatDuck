@@ -411,6 +411,9 @@ select#model-badge option {
   text-align: left;
 }
 .message-body th { background: var(--panel-2); }
+.message-body th[data-align="center"], .message-body td[data-align="center"] { text-align: center; }
+.message-body th[data-align="right"], .message-body td[data-align="right"] { text-align: right; }
+.message-body th[data-align="left"], .message-body td[data-align="left"] { text-align: left; }
 .message-body .task { list-style: none; }
 .message-body ul:has(.task) { padding-left: 4px; }
 .message-body .task input { margin-right: 6px; }

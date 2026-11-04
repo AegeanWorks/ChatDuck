@@ -369,7 +369,9 @@ export function conversationToMarkdown(conversation) {
 
 /** Serialize one conversation for JSON download (images included). */
 export function conversationToJSON(conversation) {
-  return JSON.stringify(normalizeConversation(conversation), null, 2);
+  const normalized = normalizeConversation(conversation);
+  if (!normalized) throw new Error("That is not a ChatDuck conversation.");
+  return JSON.stringify(normalized, null, 2);
 }
 
 /** Parse an imported JSON chat; returns the conversation or throws. */
@@ -384,7 +386,9 @@ export function conversationFromJSON(raw) {
 /** Parse an imported backup: one chat or an array of chats. */
 export function conversationsFromJSON(raw) {
   const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (Array.isArray(parsed) && parsed.length === 0) return [];
   const candidates = Array.isArray(parsed) ? parsed : [parsed?.conversations ?? parsed];
+  if (Array.isArray(candidates) && candidates.length === 0) return [];
   const list = candidates.flat().map(normalizeConversation).filter(Boolean);
   if (!list.length) throw new Error("That file is not a ChatDuck chat.");
   return list.slice(0, MAX_CONVERSATIONS);
@@ -408,7 +412,7 @@ export function contextUsage(conversation, maxTokens) {
 
 /** Rough token estimate for stats and the composer counter. */
 export function estimateConversationTokens(conversation) {
-  const text = (conversation?.messages ?? []).map((message) => `${message.role} ${message.content} ${message.reasoning ?? ""}`).join("\n");
+  const text = (conversation?.messages ?? []).map((message) => `${message?.role ?? ""} ${message?.content ?? ""} ${message?.reasoning ?? ""}`).join("\n");
   if (!text) return 0;
   return Math.max(1, Math.ceil(text.length / 4));
 }

@@ -90,7 +90,10 @@ export function buildMessages({ systemPrompt = "", messages = [] } = {}) {
     const text = typeof message.content === "string" ? message.content : "";
     if (message.role === "assistant") {
       // Error placeholders are retryable UI state, not conversation context.
-      if (text.trimStart().startsWith("⚠")) continue;
+      // Match the app's own template only, so a legit model answer that
+      // happens to start with ⚠ still reaches the server.
+      const trimmed = text.trimStart();
+      if (trimmed.startsWith("⚠") && trimmed.trimEnd().endsWith("— fix Settings or press Retry.")) continue;
       const unstopped = withoutStoppedMarker(text);
       // Empty-answer placeholders keep the bubble from looking broken locally.
       if (EMPTY_ANSWER_MARKERS.has(unstopped.trim())) continue;
