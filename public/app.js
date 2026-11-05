@@ -178,10 +178,11 @@ function formatTime(timestamp) {
 }
 
 function renderSidebar() {
-  const query = state.search.trim().toLowerCase();
+  const query = String(state.search ?? "").trim().toLowerCase();
   const matches = state.conversations.filter((conversation) => {
     if (!query) return true;
-    return conversation.title.toLowerCase().includes(query) || conversation.messages.some((message) => message.content.toLowerCase().includes(query));
+    if (String(conversation?.title ?? "").toLowerCase().includes(query)) return true;
+    return (conversation?.messages ?? []).some((message) => String(message?.content ?? "").toLowerCase().includes(query));
   });
   el.chatList.replaceChildren();
   if (!matches.length) {
@@ -997,7 +998,10 @@ async function importChatFile(file) {
       return;
     }
     for (const conversation of imported) {
-      if (state.conversations.some((existing) => existing.id === conversation.id)) {
+      const collides =
+        state.conversations.some((existing) => existing.id === conversation.id) ||
+        fresh.some((existing) => existing.id === conversation.id);
+      if (collides) {
         conversation.id = globalThis.crypto?.randomUUID?.() ?? `import-${Date.now()}-${fresh.length}`;
       }
       fresh.push(conversation);

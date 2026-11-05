@@ -331,3 +331,22 @@ test("the token estimate ignores missing fields", () => {
     estimateConversationTokens({ messages: [{ role: "user", content: "" }] }),
   );
 });
+
+test("empty-string usage stays null instead of becoming 0", () => {
+  const storage = fakeStorage();
+  storage.setItem("chatduck.conversations.v1", JSON.stringify([
+    { id: "u2", title: "U", createdAt: 1, updatedAt: 2, messages: [{ role: "assistant", content: "hi", usage: { prompt: "", completion: "", total: "" } }] },
+  ]));
+  assert.equal(loadConversations(storage)[0].messages[0].usage, undefined);
+});
+
+test("an empty object backup round-trips to an empty library", () => {
+  assert.deepEqual(conversationsFromJSON(JSON.stringify({ conversations: [] })), []);
+  assert.deepEqual(conversationsFromJSON({ conversations: [] }), []);
+});
+
+test("overlong drafts are capped on read", () => {
+  const storage = fakeStorage();
+  storage.setItem(DRAFTS_KEY, JSON.stringify({ a: "x".repeat(MAX_DRAFT_CHARS + 50) }));
+  assert.equal(getDraft(storage, "a").length, MAX_DRAFT_CHARS);
+});

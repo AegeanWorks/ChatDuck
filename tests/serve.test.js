@@ -28,6 +28,11 @@ test("the static path never leaves the public folder", () => {
   assert.equal(resolveStaticPath(PUBLIC, "/../package.json"), null);
 });
 
+test("dot-only paths do not resolve to the directory", () => {
+  assert.equal(resolveStaticPath(PUBLIC, "/."), null);
+  assert.ok(resolveStaticPath(PUBLIC, "/index.html").endsWith("index.html"));
+});
+
 test("the static server serves the app and refuses other methods", async (t) => {
   const server = createStaticServer({ root: PUBLIC });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

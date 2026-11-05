@@ -80,3 +80,13 @@ test("table alignment uses CSP-safe attributes, never inline styles", () => {
   assert.ok(html.includes('data-align="right"'), "right alignment survives");
   assert.ok(!html.includes("style="), "no inline style for the shipped style-src 'self' CSP");
 });
+
+test("autolinks drop trailing sentence punctuation", () => {
+  // hygiene: allow test example URL
+  const bare = renderMarkdown("see https://example.test/x.");
+  assert.ok(bare.includes('<a href="https://example.test/x"'), "trailing period stays outside the link");
+  assert.ok(bare.endsWith(".</p>") || bare.includes("</a>."), "period is kept as text");
+  // hygiene: allow test example URL
+  const md = renderMarkdown("[docs](https://example.test/a,)");
+  assert.ok(md.includes('<a href="https://example.test/a"'), "trailing comma stays outside the markdown link");
+});

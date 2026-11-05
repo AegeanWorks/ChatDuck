@@ -105,7 +105,7 @@ function loadDrafts(storage) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
   const out = {};
   for (const [id, draft] of Object.entries(parsed)) {
-    if (typeof id === "string" && typeof draft === "string") out[id] = draft;
+    if (typeof id === "string" && typeof draft === "string") out[id] = draft.slice(0, MAX_DRAFT_CHARS);
   }
   return out;
 }
@@ -184,7 +184,12 @@ function normalizeMessage(message) {
   if (Number.isFinite(Number(message.ts))) out.ts = Number(message.ts);
   const usage = message.usage;
   if (usage && typeof usage === "object") {
-    const number = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
+    const number = (value) => {
+      if (value === null || value === undefined) return null;
+      if (typeof value === "string" && value.trim() === "") return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
     const clean = { prompt: number(usage.prompt), completion: number(usage.completion), total: number(usage.total) };
     if (clean.prompt !== null || clean.completion !== null || clean.total !== null) out.usage = clean;
   }
@@ -347,7 +352,7 @@ export function editUserMessage(conversation, index, content, now = Date.now()) 
   if (conversation.messages[at]?.role !== "user" || !next) return false;
   const edited = { role: "user", content: next, ts: now };
   // Keep vision attachments: the text is re-sent with the same images.
-  if (Array.isArray(conversation.messages[at].images)) edited.images = conversation.messages[at].images;
+  if (Array.isArray(conversation.messages[at].images)) edited.images = [...conversation.messages[at].images];
   conversation.messages[at] = edited;
   conversation.messages.splice(at + 1);
   conversation.updatedAt = now;
@@ -387,6 +392,8 @@ export function conversationFromJSON(raw) {
 export function conversationsFromJSON(raw) {
   const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
   if (Array.isArray(parsed) && parsed.length === 0) return [];
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    && Array.isArray(parsed.conversations) && parsed.conversations.length === 0) return [];
   const candidates = Array.isArray(parsed) ? parsed : [parsed?.conversations ?? parsed];
   if (Array.isArray(candidates) && candidates.length === 0) return [];
   const list = candidates.flat().map(normalizeConversation).filter(Boolean);

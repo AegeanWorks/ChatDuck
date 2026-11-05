@@ -56,10 +56,16 @@ export function resolveStaticPath(root, urlPath) {
     return null;
   }
   if (decoded.includes("\0")) return null;
-  const relative = decoded === "/" ? "index.html" : decoded.replace(/^\/+/, "");
+  if (decoded === "/") return path.resolve(root, "index.html");
+  const relative = decoded.replace(/^\/+/, "");
+  // Empty or dot-only paths would resolve to the directory itself, which is
+  // never a servable file (the prefix check below would otherwise accept it
+  // for "/." before readFile fails with EISDIR).
+  if (!relative || relative === ".") return null;
   const base = path.resolve(root);
   const file = path.resolve(base, relative);
-  return file === base || file.startsWith(`${base}${path.sep}`) ? file : null;
+  if (file === base) return null;
+  return file.startsWith(`${base}${path.sep}`) ? file : null;
 }
 
 export function createStaticServer({ root = PUBLIC_DIR } = {}) {

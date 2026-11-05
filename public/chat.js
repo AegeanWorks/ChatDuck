@@ -7,9 +7,12 @@ export function canRegenerate(messages) {
   if (!Array.isArray(messages) || messages.length < 2) return false;
   const last = messages.at(-1);
   if (last?.role !== "assistant") return false;
-  // Error placeholders (⚠ ...) are retryable even without a user turn behind
-  // them, but real answers need a user turn to replay.
-  if (typeof last.content === "string" && last.content.startsWith("⚠")) return true;
+  // Error placeholders (⚠ ...) are retryable, but still need a user turn to
+  // replay — otherwise removeTrailingAssistant would leave an assistant-only
+  // history that the API cannot use.
+  if (typeof last.content === "string" && last.content.startsWith("⚠")) {
+    return messages.some((message) => message?.role === "user");
+  }
   return messages.at(-2)?.role === "user";
 }
 

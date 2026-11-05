@@ -42,6 +42,11 @@ test("the scroll box is near the bottom only within the threshold", () => {
   assert.equal(isNearBottom({}, 80), true);
 });
 
+test("error retry still needs a user turn to replay", () => {
+  assert.equal(canRegenerate([{ role: "assistant", content: "⚠ boom" }, { role: "assistant", content: "⚠ boom" }]), false);
+  assert.equal(canRegenerate([{ role: "user", content: "hi" }, { role: "assistant", content: "⚠ boom" }]), true);
+});
+
 test("a null scroll state does not throw", () => {
   assert.doesNotThrow(() => isNearBottom(null));
   assert.doesNotThrow(() => isNearBottom(undefined));

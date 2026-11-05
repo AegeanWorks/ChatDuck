@@ -18,6 +18,8 @@ export function normalizeBaseUrl(input) {
     throw new Error("The server URL must start with http or https.");
   }
   let pathname = url.pathname.replace(/\/+$/, "");
+  const v1Index = pathname.search(/\/v1(\/|$)/);
+  if (v1Index >= 0) pathname = pathname.slice(0, v1Index);
   if (pathname.endsWith("/v1")) pathname = pathname.slice(0, -3);
   return `${url.origin}${pathname}`.replace(/\/+$/, "");
 }
@@ -279,28 +281,54 @@ async function* streamDeltas(response) {
     // Some servers close without [DONE]; try one last JSON event.
     const compact = tail.replace(/^data:\s*/, "");
     if (compact && compact !== "[DONE]") {
+      let yielded = false;
+      let parsedOk = false;
       try {
         const event = JSON.parse(compact);
+        parsedOk = true;
         const choice = event?.choices?.[0];
         const reasoning = reasoningOf(choice);
-        if (reasoning) yield { reasoning };
-        const delta = choice?.delta?.content ?? choice?.message?.content;
-        if (typeof delta === "string" && delta) yield { delta };
+        if (reasoning) {
+          yield { reasoning };
+          yielded = true;
+        }
+        const rawDelta = choice?.delta?.content ?? choice?.message?.content;
+        const delta = Array.isArray(rawDelta)
+          ? rawDelta.map((part) => (typeof part?.text === "string" ? part.text : "")).join("")
+          : rawDelta;
+        if (typeof delta === "string" && delta) {
+          yield { delta };
+          yielded = true;
+        }
+        if (event?.usage) {
+          yield { usage: event.usage };
+          yielded = true;
+        }
+        // Complete JSON with no usable chat fields (for example a model that
+        // answers with a bare {"note":"hi"} object over a raw-text channel):
+        // surface it verbatim instead of vanishing or tripping the truncated
+        // envelope filter below, which is only for fragments that failed to parse.
+        if (yielded) return;
+        if (parsedOk) {
+          yield { delta: compact };
+          return;
+        }
       } catch {
-        // Plain-text tail: strip SSE framing, but drop fragments that look
-        // like truncated envelope JSON instead of leaking protocol syntax.
-        // Legit raw-text starting with [ or { (for example [hello]) is kept;
-        // only bracketed tails containing envelope keys are dropped.
-        const plain = tail
-          .split("\n")
-          .map((line) => line.replace(/^data:\s?/, "").trim())
-          .filter((line) => line && line !== "[DONE]")
-          .join("\n")
-          .trim();
-        const truncatedEnvelope = /^[[{]/.test(plain)
-          && /"(choices|delta|content|error|usage|message|id|object|model|created)/.test(plain);
-        if (plain && !truncatedEnvelope) yield { delta: plain };
+        // Not JSON: fall through to plain-text handling.
       }
+      // Plain-text tail: strip SSE framing, but drop fragments that look
+      // like truncated envelope JSON instead of leaking protocol syntax.
+      // Legit raw-text starting with [ or { (for example [hello]) is kept;
+      // only bracketed tails containing envelope keys are dropped.
+      const plain = tail
+        .split("\n")
+        .map((line) => line.replace(/^data:\s?/, "").trim())
+        .filter((line) => line && line !== "[DONE]")
+        .join("\n")
+        .trim();
+      const truncatedEnvelope = /^[[{]/.test(plain)
+        && /"(choices|delta|content|error|usage|message|id|object|model|created)/.test(plain);
+      if (plain && !truncatedEnvelope) yield { delta: plain };
     }
   }
 }

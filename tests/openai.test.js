@@ -578,3 +578,17 @@ test("a legit warn-leading answer still reaches the server", () => {
     ],
   }), [{ role: "user", content: "hi" }]);
 });
+
+test("a pasted endpoint URL still resolves to the server root", () => {
+  assert.equal(normalizeBaseUrl("http://127.0.0.1:4141/v1/models"), "http://127.0.0.1:4141");
+  assert.equal(normalizeBaseUrl("http://127.0.0.1:4141/v1/chat/completions"), "http://127.0.0.1:4141");
+  assert.equal(apiUrl("http://127.0.0.1:4141/v1/models", "/v1/chat/completions"), "http://127.0.0.1:4141/v1/chat/completions");
+});
+
+test("a complete JSON tail with no chat fields surfaces instead of vanishing", async () => {
+  const text = await streamChat({
+    baseUrl: "http://127.0.0.1:4141", model: "m", messages: [{ role: "user", content: "hi" }],
+    fetchImpl: async () => streamResponse(['data: {"note":"hi"}']),
+  });
+  assert.ok(text.includes("note"), "complete JSON without delta/usage is kept verbatim");
+});

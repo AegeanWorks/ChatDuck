@@ -7,6 +7,31 @@
 export const escapeHtml = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 
+/** Strip sentence punctuation from the end of an autolinked URL. */
+function cleanLinkHref(href) {
+  let url = String(href ?? "");
+  let changed = true;
+  while (changed && url) {
+    changed = false;
+    if (/[.,;:!?]+$/.test(url)) {
+      url = url.replace(/[.,;:!?]+$/, "");
+      changed = true;
+      continue;
+    }
+    const last = url.slice(-1);
+    if (last === ")" || last === "]") {
+      const open = last === ")" ? "(" : "[";
+      const opens = url.split(open).length - 1;
+      const closes = url.split(last).length - 1;
+      if (closes > opens) {
+        url = url.slice(0, -1);
+        changed = true;
+      }
+    }
+  }
+  return url;
+}
+
 function inline(escaped) {
   const codes = [];
   let text = escaped.replace(/`([^`\n]+)`/g, (_match, code) => {
@@ -14,8 +39,16 @@ function inline(escaped) {
     return `\u0000${codes.length - 1}\u0000`;
   });
   text = text
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label, href) => `<a href="${href}" target="_blank" rel="noreferrer noopener">${label}</a>`)
-    .replace(/(^|[\s(])(https?:\/\/[^\s)<]+)/g, '$1<a href="$2" target="_blank" rel="noreferrer noopener">$2</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label, href) => {
+      const url = cleanLinkHref(href);
+      const tail = href.slice(url.length);
+      return `<a href="${url}" target="_blank" rel="noreferrer noopener">${label}</a>${tail}`;
+    })
+    .replace(/(^|[\s(])(https?:\/\/[^\s)<]+)/g, (_match, prefix, href) => {
+      const url = cleanLinkHref(href);
+      const tail = href.slice(url.length);
+      return `${prefix}<a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a>${tail}`;
+    })
     .replace(/~~([^~]+)~~/g, "<del>$1</del>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,])/g, "$1<em>$2</em>");

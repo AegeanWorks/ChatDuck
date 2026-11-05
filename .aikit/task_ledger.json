@@ -1,71 +1,17 @@
 {
   "version": 1,
   "active_task": {
-    "task_id": "chatduck-frame",
-    "last_phase": "phase 4",
-    "active_phase": 4,
-    "status": "in_progress",
-    "updated_at": 1793726907.9773855,
-    "owner": "kilo:1",
-    "started_by": "kilo:1",
-    "continuations": []
+    "task_id": "chatduck-deferred",
+    "last_phase": "in_progress",
+    "active_phase": 5,
+    "status": "completed",
+    "updated_at": 1793774748.6802511,
+    "owner": "kilo:2",
+    "started_by": "kilo:2",
+    "continuations": [],
+    "completed_at": 1793774787.9833932
   },
   "checkpoints": [
-    {
-      "task_id": "harden-chatduck",
-      "phase": "phase 2",
-      "phase_num": 2,
-      "description": "[1/1] harden the client: parse CRLF SSE events, raise mid-stream error events, keep live conversation objects while sorting the sidebar, block new chats while streaming, and ignore IME Enter",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793488834.2857976,
-      "timestamp_str": "2026-11-01 02:20:34",
-      "agent": "commandcode:1",
-      "impact_assessment": {
-        "why": "A review found edge cases that would silently drop answers or reorder the chat list incorrectly",
-        "benefits": "Interoperability with CRLF SSE servers, visible server errors, correct sidebar order while a reply streams",
-        "risks": "contract: client stream parsing and UI behavior; dependency: none; concurrency: one stream at a time; state: conversations stay in place",
-        "mitigation": "Failing-first unit tests for CRLF and error events, plus the existing end-to-end stream smoke"
-      }
-    },
-    {
-      "task_id": "harden-chatduck",
-      "phase": "phase 4",
-      "phase_num": 4,
-      "description": "CRLF parsing, mid-stream errors and live chat ordering in; 21 tests pass, gate 4/4; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793488848.21813,
-      "timestamp_str": "2026-11-01 02:20:48",
-      "agent": "commandcode:1"
-    },
-    {
-      "task_id": "harden-chatduck",
-      "phase": "completed",
-      "phase_num": 5,
-      "description": "Task 'harden-chatduck' completed successfully.",
-      "status": "completed",
-      "timestamp": 1793488853.2219453,
-      "timestamp_str": "2026-11-01 02:20:53",
-      "agent": "commandcode:1"
-    },
-    {
-      "task_id": "polish-chat-actions",
-      "phase": "phase 2",
-      "phase_num": 2,
-      "description": "[1/3] Add a tested store helper for regenerate, then wire message copy, regenerate, scroll lock and jump-to-latest into the chat UI",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793497518.533282,
-      "timestamp_str": "2026-11-01 04:45:18",
-      "agent": "kilo:1",
-      "impact_assessment": {
-        "why": "The chat works, but users cannot copy a message, retry an answer, or read earlier text while a reply streams because every delta forces the view to the bottom",
-        "benefits": "Faster iteration on answers, usable long transcripts during streaming, and familiar chat affordances without new dependencies",
-        "risks": "contract: client UI behavior and assistant-message lifecycle; dependency: none; concurrency: one stream at a time; state: regenerating replaces the trailing assistant message in browser-local history",
-        "mitigation": "Failing-first unit test for the regenerate helper, existing 22-test suite plus project check, and a headless smoke of the served page"
-      }
-    },
     {
       "task_id": "polish-chat-actions",
       "phase": "phase 3",
@@ -264,6 +210,56 @@
       "timestamp": 1793726907.9773855,
       "timestamp_str": "2026-11-03 20:28:27",
       "agent": "kilo:1"
+    },
+    {
+      "task_id": "chatduck-frame",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'chatduck-frame' completed successfully.",
+      "status": "completed",
+      "timestamp": 1793774522.0481467,
+      "timestamp_str": "2026-11-04 09:42:02",
+      "agent": "kilo:2",
+      "continued_from": "kilo:1"
+    },
+    {
+      "task_id": "chatduck-deferred",
+      "phase": "in_progress",
+      "phase_num": 2,
+      "description": "[1/5] Deferred swarm gaps: CSP-tight table alignment, warn-marker wire filter, PORT validation, store pure-function gaps",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793774604.06985,
+      "timestamp_str": "2026-11-04 09:43:24",
+      "agent": "kilo:2",
+      "impact_assessment": {
+        "why": "Swarm analysis filed CSP-blocked table alignment, legit warn-answers culled from wire history, silent PORT fallback/raw-stack crashes, and store pure-function gaps (null JSON, empty backup, undefined token count)",
+        "benefits": "Table alignment renders under shipped CSP; legit answers survive on wire; bad PORT fails fast with fix hint; store JSON/token helpers total instead of leaking undefined/null",
+        "risks": "contract: wire history filter and markdown HTML shape; dependency: none; concurrency: single static server, one stream at a time; state: no stored-schema change",
+        "mitigation": "Failing-first node repros already recorded; keep CSP unchanged; narrow wire filter to app error template only; resolvePort preserves 0/unset fallback; new node --test cases per fix; npm test plus aikit check before commit"
+      },
+      "plan_digest": "d5d5af4499ad56ead062da8710e0da6134bf25ca7826bc5defcb434d8b762c30"
+    },
+    {
+      "task_id": "chatduck-deferred",
+      "phase": "in_progress",
+      "phase_num": 4,
+      "description": "[5/5] Deferred gaps fixed: 80/80 tests, gates 4/4, CSP-tight alignment, template-only warn filter, validated PORT, store gaps closed; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1793774748.6802511,
+      "timestamp_str": "2026-11-04 09:45:48",
+      "agent": "kilo:2"
+    },
+    {
+      "task_id": "chatduck-deferred",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'chatduck-deferred' completed successfully.",
+      "status": "completed",
+      "timestamp": 1793774787.9833956,
+      "timestamp_str": "2026-11-04 09:46:27",
+      "agent": "kilo:2"
     }
   ]
 }
