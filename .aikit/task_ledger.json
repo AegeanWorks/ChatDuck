@@ -1,53 +1,23 @@
 {
   "version": 1,
   "active_task": {
-    "task_id": "reforge-findings",
-    "last_phase": "in_progress",
+    "task_id": "license-doc-adr044",
+    "last_phase": "phase 4",
     "active_phase": 5,
     "status": "completed",
-    "updated_at": 1794648902.0025995,
-    "owner": "vibe:1",
-    "started_by": "vibe:1",
+    "updated_at": 1794667718.3186076,
+    "owner": "vibe:catalogue-finish",
+    "started_by": "vibe:catalogue-finish",
     "continuations": [],
-    "completed_at": 1794648902.2399275
+    "workspaces": [
+      {
+        "name": "chatduck",
+        "path": "projects/chatduck"
+      }
+    ],
+    "completed_at": 1794667718.7378664
   },
   "checkpoints": [
-    {
-      "task_id": "reforge:run-1",
-      "phase": "reforge stage 5",
-      "phase_num": 3,
-      "description": "Reforge stage 5: stage 5 host review partial; run active; coverage 25/27",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1794647047.3652914,
-      "timestamp_str": "2026-11-14 12:04:07",
-      "agent": "unidentified"
-    },
-    {
-      "task_id": "reforge:run-1",
-      "phase": "reforge stage 5",
-      "phase_num": 3,
-      "description": "Reforge stage 5: stage 5 host review reviewed; run active; coverage 27/27",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1794647095.6153984,
-      "timestamp_str": "2026-11-14 12:04:55",
-      "agent": "unidentified"
-    },
-    {
-      "task_id": "reforge:run-1",
-      "phase": "reforge stage 6",
-      "phase_num": 3,
-      "description": "Reforge stage 6: window 18, 3 commit(s), 5 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit, 2 binary not analysed",
-      "files_affected": [
-        "assets/screenshots/2026-11-03-chat.png",
-        "assets/screenshots/2026-11-03-settings.png"
-      ],
-      "status": "in_progress",
-      "timestamp": 1794647097.406998,
-      "timestamp_str": "2026-11-14 12:04:57",
-      "agent": "unidentified"
-    },
     {
       "task_id": "reforge:run-1",
       "phase": "reforge stage 6",
@@ -240,6 +210,63 @@
       "timestamp": 1794648902.2399297,
       "timestamp_str": "2026-11-14 12:35:02",
       "agent": "vibe:1"
+    },
+    {
+      "task_id": "license-doc-adr044",
+      "phase": "phase 2",
+      "phase_num": 2,
+      "description": "Own and deliver the ADR-044 license canonical-URL update (LICENSE and LICENSES/LicenseRef-AL-1.1.txt) left committed but unpushed by the concurrent session.",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794667693.4134896,
+      "timestamp_str": "2026-11-14 17:48:13",
+      "agent": "vibe:catalogue-finish",
+      "impact_assessment": {
+        "why": "check --strict refuses while a completed task has a later non-bookkeeping commit; the doc change is verified but lacks an owning ledger task.",
+        "benefits": "Delivery gate green; the license fix reaches origin.",
+        "risks": "contract: LICENSE references point to canonical URLs per ADR-044; dependency: none; concurrency: other session idle since 16:45; state: docs-only change already committed.",
+        "mitigation": "Verify content, record phase 4 with proofs, complete, publish."
+      },
+      "workspaces": [
+        {
+          "name": "chatduck",
+          "path": "projects/chatduck"
+        }
+      ]
+    },
+    {
+      "task_id": "license-doc-adr044",
+      "phase": "phase 4",
+      "phase_num": 4,
+      "description": "Completed: ADR-044 canonical-URL license references verified in the committed tree.",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794667718.3186076,
+      "timestamp_str": "2026-11-14 17:48:38",
+      "agent": "vibe:catalogue-finish",
+      "checklists": "passed: tests (npm test via aikit check, 4/4 gates, strict green apart from the anchor anchor: cleared by completing this task); passed: gates (python aikit.py check chatduck, 4/4)",
+      "workspaces": [
+        {
+          "name": "chatduck",
+          "path": "projects/chatduck"
+        }
+      ]
+    },
+    {
+      "task_id": "license-doc-adr044",
+      "phase": "completed",
+      "phase_num": 5,
+      "description": "Task 'license-doc-adr044' completed successfully.",
+      "status": "completed",
+      "timestamp": 1794667718.737869,
+      "timestamp_str": "2026-11-14 17:48:38",
+      "agent": "vibe:catalogue-finish",
+      "delivery": {
+        "roots": [
+          "C:\\Users\\Yunus-Emre\\Desktop\\portable_agent_kit\\projects\\chatduck"
+        ],
+        "forced": false
+      }
     }
   ]
 }
