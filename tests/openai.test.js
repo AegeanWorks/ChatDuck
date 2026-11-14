@@ -403,10 +403,12 @@ test("stream progress resets the stall timer", async () => {
             }
           }, delay);
         };
-        // Total 45ms with 15ms gaps: succeeds only when each chunk resets a 25ms budget.
-        send('data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n', 0);
-        send('data: {"choices":[{"delta":{"content":"lo"}}]}\n\n', 15);
-        send("data: [DONE]\n\n", 30);
+        // 80ms total with 30ms gaps against a 50ms stall budget: the deltas
+        // only stay inside the deadline while each one resets the timer.
+        send('data: {"choices":[{"delta":{"content":"H"}}]}\n\n', 5);
+        send('data: {"choices":[{"delta":{"content":"e"}}]}\n\n', 35);
+        send('data: {"choices":[{"delta":{"content":"llo"}}]}\n\n', 65);
+        send("data: [DONE]\n\n", 80);
         sig?.addEventListener("abort", () => {
           try {
             controller.error(sig.reason ?? new Error("aborted"));
@@ -418,14 +420,14 @@ test("stream progress resets the stall timer", async () => {
     });
     return new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } });
   };
-  const text = await streamChat({
+  const failure = await streamChat({
     baseUrl: "http://127.0.0.1:4141",
     model: "m",
     messages: [{ role: "user", content: "hi" }],
-    stallTimeoutMs: 60,
+    stallTimeoutMs: 50,
     fetchImpl,
-  });
-  assert.equal(text, "Hello");
+  }).then(() => null, (error) => error);
+  assert.equal(failure, null, "progress must reset the stall timer, but the stream hit: " + (failure?.name ?? "success"));
 });
 
 test("an idle stream times out after the last progress", async () => {

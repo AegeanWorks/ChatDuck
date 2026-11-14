@@ -61,7 +61,8 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Consequences**: <what follows, including what it costs>
 -->
 
-### ADR-008: Swarm-verified hardening keeps callbacks and history predicates exact- **Date**: 2026-11-04
+### ADR-008: Swarm-verified hardening keeps callbacks and history predicates exact
+- **Date**: 2026-11-04
 - **Status**: Accepted
 - **Context**: Parallel analysis swarms (M1-M6) returned file+line+repro findings; sampling reproduced 12 true defects in pure modules: padded model ids, double `onUsage` per answer, missed `message.reasoning_content`, stacked `_(stopped)_` leak, surrogate-split titles, null scroll crash, null/empty index deletes, empty-id chats, shared refs on duplicate, fence closed by ```js.
 - **Decision**: Fix exactly the reproduced set with minimal diffs: trim model ids in `listModels`; deliver `onUsage` once (re-emit only when the loop never did) and drop the spurious empty reasoning delta; check `message.reasoning_content` in `reasoningOf`; strip stacked stopped markers in a loop; code-point-safe `titleFrom`; null-safe `isNearBottom`; strict index validation; `id || uuid` generation; deep-clone images/usage on duplicate; `duplicateConversation(null)` returns false; `renameConversation` returns boolean; fence closes only on bare ```. Each fix carries a new `node --test` case (62 to 74 tests).
@@ -80,3 +81,10 @@ contract, a dependency, a data format or the architecture; IDs are consecutive a
 - **Context**: Audit of 17 unpushed commits (origin/master `0d2dc69` to `f2e2284`) found 10 small gaps: pasted `/v1/models` endpoint URLs broke `apiUrl`, complete JSON tails with no chat fields vanished, `normalizeMessage` mapped `""` usage to `0`, `{conversations:[]}` backups threw, overlong drafts bypassed the cap on read, `editUserMessage` aliased image arrays, autolinks kept trailing sentence punctuation, `canRegenerate` allowed error retry with no user turn, `resolveStaticPath("/.")` returned the directory, sidebar search assumed string content, and import collisions were only checked against existing chats.
 - **Decision**: Strip any trailing `/v1/*` in `normalizeBaseUrl`; surface complete JSON tails verbatim (truncated-envelope filter stays for fragments that fail to parse); align `normalizeMessage` usage nulling with `normalizeUsage`; return `[]` for empty object backups; slice drafts to `MAX_DRAFT_CHARS` on read; copy image arrays on edit; strip trailing `.,;:!?` plus unbalanced `)`/`]` from autolinks; require a user turn for error retry; return `null` for dot-only static paths; coerce sidebar search to strings; dedupe import ids against the batch too. Eight new `node --test` cases (80 to 88 green).
 - **Consequences**: Pasted endpoints, bracketed raw-text, empty usage, empty backups, overlong drafts, and duplicate imports behave predictably with no schema migration; existing chats load unchanged. Cost: a model that answers with a complete envelope-shaped JSON object over raw-text is now shown verbatim instead of dropped, which is the documented trade for never losing legit bracketed answers.
+
+### ADR-011: Startup screens claim only connections they can prove
+- **Date**: 2026-11-14
+- **Status**: Accepted
+- **Context**: The welcome screen always said "Connected to <baseUrl>", even while the status bar read "Offline - check Settings" after a failed /v1/models call (reforge run-1 stage 9 finding).
+- **Decision**: The welcome line branches on the last known state.models: the "Connected" wording appears only after the server listed models; otherwise it names the server and points at Settings - Test connection. refreshModels re-renders the messages pane so the welcome text tracks the status bar.
+- **Consequences**: The two startup signals can no longer contradict each other; a mid-session model-list change updates the welcome text the same way. Cost: the welcome line re-renders on every refreshModels call, which is one extra renderMessages pass per connection status change.

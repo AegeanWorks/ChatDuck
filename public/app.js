@@ -400,7 +400,12 @@ function welcome() {
   const box = document.createElement("div");
   box.className = "welcome";
   box.appendChild(Object.assign(document.createElement("h2"), { textContent: "ChatDuck" }));
-  box.appendChild(Object.assign(document.createElement("p"), { className: "muted", textContent: `Connected to ${state.settings.baseUrl}. Ask anything, or start with one of these.` }));
+  // Claim "Connected" only once the server actually listed models; the status
+  // bar shows the same truth, so both signals must agree.
+  const line = state.models.length
+    ? `Connected to ${state.settings.baseUrl}. Ask anything, or start with one of these.`
+    : `Server ${state.settings.baseUrl} has not listed models yet. Open Settings and press Test connection.`;
+  box.appendChild(Object.assign(document.createElement("p"), { className: "muted", textContent: line }));
   const suggestions = [
     "Explain this error in plain words.",
     "Write a function that parses a CSV line.",
@@ -949,6 +954,8 @@ async function refreshModels({ quiet = false } = {}) {
     if (!quiet) el.settingsStatus.textContent = error.message;
   }
   renderHeader();
+  // The welcome screen states the connection, so refresh it with the status.
+  renderMessages();
 }
 
 function fillSettings() {

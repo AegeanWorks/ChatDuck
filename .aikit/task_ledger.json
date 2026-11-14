@@ -1,256 +1,16 @@
 {
   "version": 1,
   "active_task": {
-    "task_id": "chatduck-deferred",
+    "task_id": "reforge-findings",
     "last_phase": "in_progress",
     "active_phase": 5,
-    "status": "completed",
-    "updated_at": 1793774748.6802511,
-    "owner": "kilo:2",
-    "started_by": "kilo:2",
-    "continuations": [],
-    "completed_at": 1793774787.9833932
+    "status": "in_progress",
+    "updated_at": 1794648671.3398545,
+    "owner": "vibe:1",
+    "started_by": "vibe:1",
+    "continuations": []
   },
   "checkpoints": [
-    {
-      "task_id": "polish-chat-actions",
-      "phase": "phase 3",
-      "phase_num": 3,
-      "description": "[2/3] Added removeTrailingAssistant with a failing-first test; store suite 6/6",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793497710.7109127,
-      "timestamp_str": "2026-11-01 04:48:30",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "polish-chat-actions",
-      "phase": "phase 4",
-      "phase_num": 4,
-      "description": "[3/3] UI actions and scroll lock in; 23 tests pass, headless Edge smoke passed stream/copy/regenerate, project gate 4/4; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793498587.7577193,
-      "timestamp_str": "2026-11-01 05:03:07",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "polish-chat-actions",
-      "phase": "completed",
-      "phase_num": 5,
-      "description": "Task 'polish-chat-actions' completed successfully.",
-      "status": "completed",
-      "timestamp": 1793498588.040012,
-      "timestamp_str": "2026-11-01 05:03:08",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "address-chat-review",
-      "phase": "phase 2",
-      "phase_num": 2,
-      "description": "[1/1] Address the review: gate Regenerate on a valid last turn, remove exactly one trailing assistant, update only the streaming message, make actions overlays without layout shift, and cover the predicates with tests; then run Phase 4 and push",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793519488.5740335,
-      "timestamp_str": "2026-11-01 10:51:28",
-      "agent": "kilo:1",
-      "impact_assessment": {
-        "why": "The review found an inconsistent Regenerate button, ambiguous multi-removal, per-frame replacement of interactive controls, and a cosmetic layout gap",
-        "benefits": "Predictable regenerate behavior, stable Copy/Regenerate controls during streaming, no reserved action row, and tested pure predicates",
-        "risks": "contract: chat view behavior and the new public/chat.js module; dependency: none; concurrency: one stream at a time; state: unchanged browser-local history",
-        "mitigation": "Unit tests for canRegenerate/isNearBottom and removeTrailingAssistant, the 26-test suite, two headless Edge smokes, and the project gate before commit"
-      }
-    },
-    {
-      "task_id": "address-chat-review",
-      "phase": "phase 4",
-      "phase_num": 4,
-      "description": "[1/1] Review fixes in; 26 tests pass, both headless Edge smokes pass, project gate 4/4; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793519691.423857,
-      "timestamp_str": "2026-11-01 10:54:51",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "address-chat-review",
-      "phase": "completed",
-      "phase_num": 5,
-      "description": "Task 'address-chat-review' completed successfully.",
-      "status": "completed",
-      "timestamp": 1793519691.9586346,
-      "timestamp_str": "2026-11-01 10:54:51",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "audit-chatduck-waves",
-      "phase": "in_progress",
-      "phase_num": 2,
-      "description": "[1/3] Audit chatduck waves: wave0 clean, first10 survey+verify, 11-13 survey+verify, minimal raw-text tail fix",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793722172.4719021,
-      "timestamp_str": "2026-11-03 19:09:32",
-      "agent": "kilo:1",
-      "impact_assessment": {
-        "why": "Audit 13 chatduck commits in waves; raw-text SSE tail drops legit bracket text",
-        "benefits": "Verifiable wave audit plus failing-first fix that keeps legit [hello]/{hello} while still dropping truncated envelope JSON",
-        "risks": "contract: SSE tail parsing in public/openai.js; dependency: none; concurrency: none; state: no stored state change",
-        "mitigation": "Failing-first Node repro, existing 51-test suite plus new tail test, project check 4/4 before commit"
-      },
-      "plan_digest": "dcb72951607c8246351718aa8792efc736dc37ed78ff2cd39334f397cd8c8bae"
-    },
-    {
-      "task_id": "audit-chatduck-waves",
-      "phase": "in_progress",
-      "phase_num": 3,
-      "description": "[2/3] Failing-first tail fix in; 51 pass 1 fail before, 52 pass after; README tree and ADR-005 appended",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793722245.8390937,
-      "timestamp_str": "2026-11-03 19:10:45",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "audit-chatduck-waves",
-      "phase": "in_progress",
-      "phase_num": 4,
-      "description": "[3/3] Gates green: npm test 52/52, aikit check 4/4, README 8251 chars with prerequisites/test/tree; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793722247.9419944,
-      "timestamp_str": "2026-11-03 19:10:47",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "audit-chatduck-waves",
-      "phase": "completed",
-      "phase_num": 5,
-      "description": "Task 'audit-chatduck-waves' completed successfully.",
-      "status": "completed",
-      "timestamp": 1793722257.8972456,
-      "timestamp_str": "2026-11-03 19:10:57",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "chatduck-drafts",
-      "phase": "phase 2",
-      "phase_num": 2,
-      "description": "[1/1] per-chat composer drafts: localStorage-backed unsent text per chat id, synchronous save on input, restore on select/create/delete/import/clear-all/init, clear on Send; no wire, render, streaming, thinking or key changes",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793724926.936033,
-      "timestamp_str": "2026-11-03 19:55:26",
-      "agent": "kilo:1",
-      "impact_assessment": {
-        "why": "switching chats or reloading lost unsent composer text",
-        "benefits": "drafts survive reloads and chat switches with zero server impact",
-        "risks": "contract: new localStorage key and store API; dependency: none; concurrency: single composer, streaming guards block select/create/delete; state: drafts share localStorage quota",
-        "mitigation": "restore only at select/create/delete/import/clear-all/init call sites; 20k char cap; corrupt reads as empty; quota failure keeps live composer value; 3 new unit tests plus isolated-browser E2E"
-      },
-      "plan_digest": "c31d030c8c36a1d0b54cf938525cf1627f4a69cf20e255a22196dfd0d0f241d9"
-    },
-    {
-      "task_id": "chatduck-drafts",
-      "phase": "phase 4",
-      "phase_num": 4,
-      "description": "drafts implemented, tests 55/55, gates 4/4, isolated-browser E2E (per-chat isolation, reload restore, send clears) and screenshot compare clean; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793724934.4379535,
-      "timestamp_str": "2026-11-03 19:55:34",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "chatduck-drafts",
-      "phase": "phase 5",
-      "phase_num": 5,
-      "description": "Task 'chatduck-drafts' completed successfully: per-chat drafts shipped, gates green, E2E + privacy verified, one pre-existing finding filed back (stale rAF paint)",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793725464.9026785,
-      "timestamp_str": "2026-11-03 20:04:24",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "chatduck-frame",
-      "phase": "phase 2",
-      "phase_num": 2,
-      "description": "[1/1] settle stale streaming frame: cancel pending rAF in runTurn.finally plus idle guard in updateStreamingMessage; no API, wire, render, storage, or key changes",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793726843.7223322,
-      "timestamp_str": "2026-11-03 20:27:23",
-      "agent": "kilo:1",
-      "impact_assessment": {
-        "why": "a queued paint can fire after the final render, leaving thinking open and stats hidden until the next render",
-        "benefits": "every completed turn settles into final paint immediately with no interaction",
-        "risks": "contract: none, same DOM functions; dependency: none; concurrency: single stream handle trusted by existing guards; state: none, no stored data",
-        "mitigation": "cancel is deterministic via microtask-before-paint ordering; guard falls back to full renderMessages; E2E over mock SSE proves 5 consecutive settles incl stop and error"
-      },
-      "plan_digest": "80d5b1a8456bf08cd5e077bc08ab9e55a28a83b4ba7bb4eba26667220615ccdd"
-    },
-    {
-      "task_id": "chatduck-drafts",
-      "phase": "superseded",
-      "phase_num": 5,
-      "description": "Superseded by 'chatduck-frame' without --complete or --reset",
-      "status": "superseded",
-      "timestamp": 1793726843.7223322,
-      "timestamp_str": "2026-11-03 20:27:23",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "chatduck-frame",
-      "phase": "phase 4",
-      "phase_num": 4,
-      "description": "frame settle shipped: tests 55/55, gates 4/4, isolated-browser E2E 5/5 settles (3 stream, stop, error) with closed thinking plus stats and no rescue render; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793726907.9773855,
-      "timestamp_str": "2026-11-03 20:28:27",
-      "agent": "kilo:1"
-    },
-    {
-      "task_id": "chatduck-frame",
-      "phase": "completed",
-      "phase_num": 5,
-      "description": "Task 'chatduck-frame' completed successfully.",
-      "status": "completed",
-      "timestamp": 1793774522.0481467,
-      "timestamp_str": "2026-11-04 09:42:02",
-      "agent": "kilo:2",
-      "continued_from": "kilo:1"
-    },
-    {
-      "task_id": "chatduck-deferred",
-      "phase": "in_progress",
-      "phase_num": 2,
-      "description": "[1/5] Deferred swarm gaps: CSP-tight table alignment, warn-marker wire filter, PORT validation, store pure-function gaps",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793774604.06985,
-      "timestamp_str": "2026-11-04 09:43:24",
-      "agent": "kilo:2",
-      "impact_assessment": {
-        "why": "Swarm analysis filed CSP-blocked table alignment, legit warn-answers culled from wire history, silent PORT fallback/raw-stack crashes, and store pure-function gaps (null JSON, empty backup, undefined token count)",
-        "benefits": "Table alignment renders under shipped CSP; legit answers survive on wire; bad PORT fails fast with fix hint; store JSON/token helpers total instead of leaking undefined/null",
-        "risks": "contract: wire history filter and markdown HTML shape; dependency: none; concurrency: single static server, one stream at a time; state: no stored-schema change",
-        "mitigation": "Failing-first node repros already recorded; keep CSP unchanged; narrow wire filter to app error template only; resolvePort preserves 0/unset fallback; new node --test cases per fix; npm test plus aikit check before commit"
-      },
-      "plan_digest": "d5d5af4499ad56ead062da8710e0da6134bf25ca7826bc5defcb434d8b762c30"
-    },
-    {
-      "task_id": "chatduck-deferred",
-      "phase": "in_progress",
-      "phase_num": 4,
-      "description": "[5/5] Deferred gaps fixed: 80/80 tests, gates 4/4, CSP-tight alignment, template-only warn filter, validated PORT, store gaps closed; checklists: passed",
-      "files_affected": [],
-      "status": "in_progress",
-      "timestamp": 1793774748.6802511,
-      "timestamp_str": "2026-11-04 09:45:48",
-      "agent": "kilo:2"
-    },
     {
       "task_id": "chatduck-deferred",
       "phase": "completed",
@@ -260,6 +20,224 @@
       "timestamp": 1793774787.9833956,
       "timestamp_str": "2026-11-04 09:46:27",
       "agent": "kilo:2"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 5",
+      "phase_num": 3,
+      "description": "Reforge stage 5: window 15, 3 commit(s), 7 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794646994.570703,
+      "timestamp_str": "2026-11-14 12:03:14",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 5",
+      "phase_num": 3,
+      "description": "Reforge stage 5: stage 5 host review partial; run active; coverage 25/27",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647047.3652914,
+      "timestamp_str": "2026-11-14 12:04:07",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 5",
+      "phase_num": 3,
+      "description": "Reforge stage 5: stage 5 host review reviewed; run active; coverage 27/27",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647095.6153984,
+      "timestamp_str": "2026-11-14 12:04:55",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 6",
+      "phase_num": 3,
+      "description": "Reforge stage 6: window 18, 3 commit(s), 5 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit, 2 binary not analysed",
+      "files_affected": [
+        "assets/screenshots/2026-11-03-chat.png",
+        "assets/screenshots/2026-11-03-settings.png"
+      ],
+      "status": "in_progress",
+      "timestamp": 1794647097.406998,
+      "timestamp_str": "2026-11-14 12:04:57",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 6",
+      "phase_num": 3,
+      "description": "Reforge stage 6: stage 6 host review reviewed; run active; coverage 10/10",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647192.157753,
+      "timestamp_str": "2026-11-14 12:06:32",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 7",
+      "phase_num": 3,
+      "description": "Reforge stage 7: window 21, 3 commit(s), 19 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647195.0435195,
+      "timestamp_str": "2026-11-14 12:06:35",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 7",
+      "phase_num": 3,
+      "description": "Reforge stage 7: stage 7 host review partial; run active; coverage 82/83",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647378.5823374,
+      "timestamp_str": "2026-11-14 12:09:38",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 7",
+      "phase_num": 3,
+      "description": "Reforge stage 7: stage 7 host review reviewed; run active; coverage 83/83",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647406.6580107,
+      "timestamp_str": "2026-11-14 12:10:06",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 8",
+      "phase_num": 3,
+      "description": "Reforge stage 8: window 24, 3 commit(s), 12 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647408.8344705,
+      "timestamp_str": "2026-11-14 12:10:08",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 8",
+      "phase_num": 3,
+      "description": "Reforge stage 8: stage 8 host review partial; run active; coverage 33/34",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647469.6187181,
+      "timestamp_str": "2026-11-14 12:11:09",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 8",
+      "phase_num": 3,
+      "description": "Reforge stage 8: stage 8 host review reviewed; run active; coverage 34/34",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647482.9721642,
+      "timestamp_str": "2026-11-14 12:11:22",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 9",
+      "phase_num": 3,
+      "description": "Reforge stage 9: window 27, 3 commit(s), 19 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647485.944334,
+      "timestamp_str": "2026-11-14 12:11:25",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 9",
+      "phase_num": 3,
+      "description": "Reforge stage 9: stage 9 host review reviewed; run active; coverage 28/28",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647708.2412584,
+      "timestamp_str": "2026-11-14 12:15:08",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 10",
+      "phase_num": 3,
+      "description": "Reforge stage 10: window 28, 1 commit(s), 9 file(s) reviewed (unreviewed), 0 finding(s), 0 repaired, empty \u2014 nothing to commit",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794647711.534756,
+      "timestamp_str": "2026-11-14 12:15:11",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 10",
+      "phase_num": 3,
+      "description": "Reforge stage 10: stage 10 host review reviewed; run completed; coverage 9/9",
+      "files_affected": [],
+      "status": "completed",
+      "timestamp": 1794647747.7710376,
+      "timestamp_str": "2026-11-14 12:15:47",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 10",
+      "phase_num": 3,
+      "description": "Reforge stage 10: stage 10 host review partial; run completed; coverage 0/9",
+      "files_affected": [],
+      "status": "completed",
+      "timestamp": 1794648381.6039612,
+      "timestamp_str": "2026-11-14 12:26:21",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge:run-1",
+      "phase": "reforge stage 10",
+      "phase_num": 3,
+      "description": "Reforge stage 10: stage 10 host review reviewed; run completed; coverage 9/9",
+      "files_affected": [],
+      "status": "completed",
+      "timestamp": 1794648404.4517903,
+      "timestamp_str": "2026-11-14 12:26:44",
+      "agent": "unidentified"
+    },
+    {
+      "task_id": "reforge-findings",
+      "phase": "in_progress",
+      "phase_num": 2,
+      "description": "[2/2] Close the two reforge findings: strengthen the stall-timer test; welcome screen reflects connection status",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794648510.2382524,
+      "timestamp_str": "2026-11-14 12:28:30",
+      "agent": "vibe:1",
+      "impact_assessment": {
+        "why": "Reforge run-1 recorded two human-judgment findings: the stall-timer test passes even if the poke/reset logic is removed, and the welcome screen claims Connected while the status bar shows Offline",
+        "benefits": "Regression proof for the stall reset; welcome text no longer contradicts the status bar",
+        "risks": "contract: none (test-only) and a UI wording change; dependency: none; concurrency: none; state: none",
+        "mitigation": "Test-only mutation check for the timer; render the welcome line from the live status kind; npm test plus aikit check --strict before commit"
+      }
+    },
+    {
+      "task_id": "reforge-findings",
+      "phase": "in_progress",
+      "phase_num": 5,
+      "description": "[2/2] Findings closed: stall-timer test proven by mutation (fails at 77ms with the poke disabled), welcome line branches on state.models and refreshModels re-renders the pane; 88/88 tests, gates 4/4; checklists: passed",
+      "files_affected": [],
+      "status": "in_progress",
+      "timestamp": 1794648671.3398545,
+      "timestamp_str": "2026-11-14 12:31:11",
+      "agent": "vibe:1"
     }
   ]
 }
