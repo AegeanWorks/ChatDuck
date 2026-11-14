@@ -20,7 +20,6 @@ export function normalizeBaseUrl(input) {
   let pathname = url.pathname.replace(/\/+$/, "");
   const v1Index = pathname.search(/\/v1(\/|$)/);
   if (v1Index >= 0) pathname = pathname.slice(0, v1Index);
-  if (pathname.endsWith("/v1")) pathname = pathname.slice(0, -3);
   return `${url.origin}${pathname}`.replace(/\/+$/, "");
 }
 

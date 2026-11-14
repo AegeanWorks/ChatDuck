@@ -7,9 +7,9 @@ import { titleFrom } from "./openai.js";
  */
 
 export const SETTINGS_KEY = "chatduck.settings.v1";
-export const CONVERSATIONS_KEY = "chatduck.conversations.v1"; // aikit:allow-secret storage key, not a credential
+export const CONVERSATIONS_KEY = "chatduck.conversations.v1"; // aikit:allow-secret -- storage key name, not a credential
 export const API_KEY = "chatduck.apiKey";
-export const DRAFTS_KEY = "chatduck.drafts.v1"; // aikit:allow-secret storage key, not a credential
+export const DRAFTS_KEY = "chatduck.drafts.v1"; // aikit:allow-secret -- storage key name, not a credential
 export const MAX_CONVERSATIONS = 200;
 /** Long pastes stay restorable without crowding out chats in localStorage. */
 export const MAX_DRAFT_CHARS = 20000;
