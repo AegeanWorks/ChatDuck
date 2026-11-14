@@ -8,6 +8,8 @@
 
 A fast, local-first web chat UI for any OpenAI-compatible model server, including ModelDuck. It is one static page and a few modules: no build step, no framework, no backend, and no telemetry.
 
+> **Archived**: Reforge delivered and audited; kept online under its own repo, no further active development. (archived 2026-11-14). This project is read-only; its GitHub repository is archived.
+
 ## ⚡ 30-Second Cold-Start Quick Reference
 
 - **Runtime Prerequisites**: Node.js 20 or newer (only to serve the static files and run the tests). A browser with `fetch` and `ReadableStream`. No `npm install` is needed.
